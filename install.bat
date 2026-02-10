@@ -76,7 +76,7 @@ echo ✅ Ollama đã sẵn sàng
 REM 6. Pull model Ollama
 echo.
 echo 📥 Đang tải model gemma2:2b (~1.6GB)...
-docker exec ollama ollama pull gemma2:2b
+docker exec chatbot ollama pull gemma2:2b
 
 echo.
 echo ============================================
