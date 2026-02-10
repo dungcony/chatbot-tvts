@@ -7,12 +7,13 @@ from models.document import get_collection, VECTOR_INDEX_NAME
 from services.embedding import get_embedding_model
 
 
-def vector_search(query: str, num_candidates: int = 150, limit: int = 4):
+def vector_search(query: str, num_candidates: int = 150, limit: int = 4, score_threshold: float = 0.6):
     """
     Tìm kiếm vector trong MongoDB (theo Hình 4.2.3):
     - index: "vector_index"
     - numCandidates: 150
     - limit: 4
+    - score_threshold: Chỉ giữ docs có score >= ngưỡng này
 
     Returns:
         list[dict]: Danh sách documents với keys: content, score
@@ -41,4 +42,7 @@ def vector_search(query: str, num_candidates: int = 150, limit: int = 4):
     ]
 
     results = list(collection.aggregate(pipeline))
-    return results
+
+    # Lọc bỏ docs có score thấp hơn ngưỡng
+    filtered = [doc for doc in results if doc.get("score", 0) >= score_threshold]
+    return filtered

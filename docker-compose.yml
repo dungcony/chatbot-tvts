@@ -1,0 +1,12 @@
+services:
+  # Flask Chatbot (đã tích hợp Ollama bên trong)
+  chatbot:
+    build: .
+    container_name: chatbot
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - OLLAMA_BASE_URL=http://localhost:11434
+    restart: unless-stopped

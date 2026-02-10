@@ -1,38 +1,24 @@
 """
-LLM Service - Gemini 2.0 Flash
+LLM Service - Ollama (Gemma2 9B)
 Tổng hợp thông tin từ context và sinh câu trả lời cho người dùng.
+Chạy local qua Ollama, không cần API key.
 """
 
-import google.generativeai as genai
-from config import GEMINI_API_KEY
-
-_llm = None
-
-
-def get_llm():
-    """Trả về Gemini model (khởi tạo 1 lần duy nhất)."""
-    global _llm
-    if _llm is None:
-        print("Đang khởi tạo Gemini...")
-        genai.configure(api_key=GEMINI_API_KEY)
-        _llm = genai.GenerativeModel("gemini-2.0-flash")
-        print("Gemini sẵn sàng!")
-    return _llm
+import requests
+from config import OLLAMA_BASE_URL, OLLAMA_MODEL
 
 
 def generate_answer(query: str, context_docs: list) -> str:
     """
-    Dùng Gemini tổng hợp thông tin từ context và sinh câu trả lời.
+    Dùng Ollama tổng hợp thông tin từ context và sinh câu trả lời.
 
     Args:
         query: Câu hỏi của người dùng
         context_docs: Danh sách documents từ vector search
 
     Returns:
-        str: Câu trả lời từ Gemini
+        str: Câu trả lời từ Ollama
     """
-    llm = get_llm()
-
     context = "\n\n---\n\n".join([doc["content"] for doc in context_docs])
 
     prompt = f"""Bạn là trợ lý tư vấn tuyển sinh đại học. Hãy trả lời câu hỏi của người dùng
@@ -48,5 +34,14 @@ CÂU HỎI: {query}
 
 TRẢ LỜI:"""
 
-    response = llm.generate_content(prompt)
-    return response.text
+    response = requests.post(
+        f"{OLLAMA_BASE_URL}/api/generate",
+        json={
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False
+        },
+        timeout=120
+    )
+    response.raise_for_status()
+    return response.json()["response"]

@@ -13,8 +13,9 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME", "tuvantuyensinh")
 
-# Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Ollama
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma2:2b")
 
 # Embedding
 EMBEDDING_MODEL = os.getenv(
