@@ -120,6 +120,17 @@ def api_del_url():
     remove_url(sid, url)
     return jsonify({"success": True})
 
+@app.route("/admin/api/crawl-url", methods=["POST"])
+def api_crawl_url():
+    """Crawl 1 URL don le."""
+    d = request.get_json()
+    sid = d.get("school_id", "")
+    url = d.get("url", "")
+    if not sid or not url:
+        return jsonify({"error": "Thieu thong tin"}), 400
+    from scripts.crawl_data import crawl_single
+    return jsonify(crawl_single(sid, url))
+
 @app.route("/admin/api/data-files", methods=["GET"])
 def api_data_files():
     from scripts.prepare_data import get_all_data_files
