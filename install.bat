@@ -66,9 +66,9 @@ echo ⏳ Đang chờ Ollama khởi động...
 timeout /t 10 /nobreak >nul
 
 :wait_ollama
-curl -s http://localhost:11434/api/tags >nul 2>&1
+docker exec ollama ollama list >nul 2>&1
 if %errorlevel% neq 0 (
-    timeout /t 2 /nobreak >nul
+    timeout /t 3 /nobreak >nul
     goto wait_ollama
 )
 echo ✅ Ollama đã sẵn sàng
@@ -76,7 +76,7 @@ echo ✅ Ollama đã sẵn sàng
 REM 6. Pull model Ollama
 echo.
 echo 📥 Đang tải model gemma2:2b (~1.6GB)...
-docker exec chatbot ollama pull gemma2:2b
+docker exec ollama ollama pull gemma2:2b
 
 echo.
 echo ============================================

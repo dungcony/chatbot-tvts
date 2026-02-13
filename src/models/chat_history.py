@@ -3,23 +3,32 @@ Model Chat History - Quản lý collection 'chat_history' trong MongoDB
 Schema: { _id, session_id, role, message, timestamp }
 """
 
-from pymongo import MongoClient
-from config import MONGO_URI, DB_NAME
+from pymongo import ASCENDING, DESCENDING
+from models.db import get_db
 
 COLLECTION_NAME = "chat_history"
-
-_client = None
 _collection = None
+_indexes_created = False
 
 
 def get_collection():
     """Trả về collection 'chat_history' (kết nối 1 lần duy nhất)."""
-    global _client, _collection
+    global _collection, _indexes_created
     if _collection is None:
-        print("Đang kết nối MongoDB [chat_history]...")
-        _client = MongoClient(MONGO_URI)
-        _collection = _client[DB_NAME][COLLECTION_NAME]
-        print("MongoDB [chat_history] đã kết nối!")
+        _collection = get_db()[COLLECTION_NAME]
+        if not _indexes_created:
+            # Index cho query theo session_id + sort timestamp
+            _collection.create_index(
+                [("session_id", ASCENDING), ("timestamp", DESCENDING)],
+                background=True
+            )
+            # TTL index: tu dong xoa sau 7 ngay
+            _collection.create_index(
+                "timestamp",
+                expireAfterSeconds=7 * 24 * 3600,
+                background=True
+            )
+            _indexes_created = True
     return _collection
 
 

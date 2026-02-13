@@ -3,19 +3,16 @@ Model DataVersion - Theo doi file da xu ly embedding
 Collection: data_versions
 """
 from datetime import datetime, timezone
-from pymongo import MongoClient
-from config import MONGO_URI, DB_NAME
+from models.db import get_db
 
 COLLECTION_NAME = "data_versions"
-_client = None
 _collection = None
 
 
 def get_collection():
-    global _client, _collection
+    global _collection
     if _collection is None:
-        _client = MongoClient(MONGO_URI)
-        _collection = _client[DB_NAME][COLLECTION_NAME]
+        _collection = get_db()[COLLECTION_NAME]
     return _collection
 
 

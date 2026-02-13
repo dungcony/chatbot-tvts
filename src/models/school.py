@@ -3,19 +3,17 @@ Model School - Quan ly thong tin truong trong MongoDB
 Collection: schools
 Document: {school_id, name, keywords, urls, crawled, failed}
 """
-from pymongo import MongoClient
-from config import MONGO_URI, DB_NAME
+import re
+from models.db import get_db
 
 COLLECTION_NAME = "schools"
-_client = None
 _collection = None
 
 
 def get_collection():
-    global _client, _collection
+    global _collection
     if _collection is None:
-        _client = MongoClient(MONGO_URI)
-        _collection = _client[DB_NAME][COLLECTION_NAME]
+        _collection = get_db()[COLLECTION_NAME]
     return _collection
 
 
@@ -29,12 +27,17 @@ def get_all_schools():
     return docs
 
 
-def detect_school(query):
-    """Nhan dien truong tu cau hoi. Tra ve school_id hoac None."""
+def detect_school(query, schools=None):
+    """Nhan dien truong tu cau hoi. Tra ve school_id hoac None.
+    Truyen schools vao de tranh goi get_all_schools nhieu lan."""
     q = query.lower()
-    for s in get_all_schools():
+    if schools is None:
+        schools = get_all_schools()
+    for s in schools:
         for kw in s.get("keywords", []):
-            if kw.lower() in q:
+            # Dung word boundary de tranh match substring
+            # vd: 'ai' khong match 'dai', 'hcm' khong match 'pham'
+            if re.search(r'\b' + re.escape(kw.lower()) + r'\b', q):
                 return s["school_id"]
     return None
 

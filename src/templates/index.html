@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot Tư vấn Tuyển sinh</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -77,6 +79,31 @@
             color: #1a1a1a;
             border-bottom-left-radius: 4px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            white-space: normal;
+        }
+
+        .message.bot p {
+            margin: 0 0 8px 0;
+        }
+
+        .message.bot p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message.bot ul,
+        .message.bot ol {
+            margin: 4px 0 8px 20px;
+        }
+
+        .message.bot strong {
+            font-weight: 600;
+        }
+
+        .message.bot code {
+            background: #f0f2f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
         }
 
         .message.user {
@@ -279,7 +306,8 @@
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         const welcome = document.getElementById('welcome');
-        const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const sessionId = localStorage.getItem('chat_session_id') || ('session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+        localStorage.setItem('chat_session_id', sessionId);
 
         function askSuggestion(btn) {
             userInput.value = btn.textContent;
@@ -298,7 +326,12 @@
             msg.appendChild(label);
 
             const content = document.createElement('div');
-            content.textContent = text;
+            if (isUser) {
+                content.textContent = text;
+            } else {
+                // Render markdown cho bot, sanitize de chong XSS
+                content.innerHTML = DOMPurify.sanitize(marked.parse(text));
+            }
             msg.appendChild(content);
 
             messagesDiv.insertBefore(msg, typingDiv);

@@ -24,10 +24,11 @@ def is_confirmation(query):
 
 def detect_school_from_history(session_id):
     """Tim school da duoc detect trong lich su hoi thoai gan nhat."""
-    from models.school import detect_school
+    from models.school import detect_school, get_all_schools
+    schools = get_all_schools()  # Query DB 1 lan duy nhat
     history = get_recent_history(session_id, limit=10)
     for msg in reversed(history):
-        school = detect_school(msg["message"])
+        school = detect_school(msg["message"], schools=schools)
         if school:
             return school
     return None
@@ -101,7 +102,9 @@ def chat():
         sources = [{"content": d["content"][:200], "score": round(d.get("score", 0), 4)} for d in context_docs]
         return jsonify({"answer": answer, "sources": sources})
     except Exception as e:
-        return jsonify({"error": f"Loi: {str(e)}"}), 500
+        import traceback
+        traceback.print_exc()  # Log chi tiet ra console
+        return jsonify({"error": "Da xay ra loi khi xu ly. Vui long thu lai."}), 500
 
 
 # ==================== ADMIN ====================
@@ -189,4 +192,5 @@ if __name__ == "__main__":
     print("http://localhost:5000")
     print("http://localhost:5000/admin")
     print("=" * 50)
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    debug = os.getenv("FLASK_DEBUG", "1").lower() in ("1", "true")
+    app.run(debug=debug, host="0.0.0.0", port=5000)

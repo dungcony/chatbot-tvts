@@ -1,317 +1,774 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Quan ly Du lieu</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
-.hd{background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
-.hd h1{font-size:20px}.hd a{color:#fff;text-decoration:none;font-size:14px}
-.ct{max-width:960px;margin:24px auto;padding:0 16px}
-.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px}
-.ch{padding:14px 20px;border-bottom:1px solid #e4e6eb;display:flex;justify-content:space-between;align-items:center}
-.ch h2{font-size:16px;color:#1a73e8}.cb{padding:20px}
-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#1a1a1a}
-.hint{font-size:11px;color:#65676b;font-weight:400;margin-left:4px}
-input,select{width:100%;padding:10px 14px;border:2px solid #e4e6eb;border-radius:8px;font-size:14px;outline:none}
-input:focus,select:focus{border-color:#1a73e8}
-.fr{margin-bottom:14px}
-.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
-.bp{background:#1a73e8;color:#fff}.bg{background:#0f9d58;color:#fff}.bo{background:#f9ab00;color:#fff}.bd{background:#ea4335;color:#fff}
-.bs{padding:6px 14px;font-size:12px}
-.btn:disabled{opacity:.5}
-.g{display:flex;gap:8px}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{background:#f8f9fa;text-align:left;padding:10px 14px;font-size:12px;color:#65676b;text-transform:uppercase}
-td{padding:10px 14px;border-top:1px solid #e4e6eb}
-.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
-.bv{background:#e8f0fe;color:#1a73e8}.bdn{background:#e6f4ea;color:#0f9d58}.bw{background:#fef7e0;color:#f9ab00}.bred{background:#fce8e6;color:#ea4335}
-.kw{display:inline-block;background:#e8f0fe;color:#1a73e8;padding:2px 8px;border-radius:10px;font-size:11px;margin:2px}
-.toast{position:fixed;top:20px;right:20px;padding:14px 24px;border-radius:8px;color:#fff;font-size:14px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:translateX(120%);transition:transform .3s}
-.toast.show{transform:translateX(0)}.tok{background:#0f9d58}.terr{background:#ea4335}.tinfo{background:#1a73e8}
-.ur{display:flex;gap:8px;margin-bottom:8px}.ur input{flex:1}
-.ur .rm{width:38px;height:38px;border:2px solid #e4e6eb;border-radius:8px;background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.ba{border:2px dashed #c2d7f5;background:#f8fbff;color:#1a73e8;border-radius:8px;padding:8px;font-size:13px;cursor:pointer;width:100%;text-align:center}
-.stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-.st{flex:1;min-width:80px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center}
-.st .n{font-size:28px;font-weight:700;color:#1a73e8}.st .l{font-size:12px;color:#65676b}
-.st.err .n{color:#ea4335}
-.ld{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:6px}
-.lds{display:inline-block;width:12px;height:12px;border:2px solid #1a73e8;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
-@keyframes sp{to{transform:rotate(360deg)}}
-.pipe{display:flex;align-items:center;gap:8px;margin-bottom:20px;padding:14px 20px;background:#fff;border-radius:10px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.08);flex-wrap:wrap}
-.pipe .s{padding:6px 14px;border-radius:20px;background:#f8f9fa;border:1px solid #e4e6eb;font-weight:500}
-.pipe .a{color:#999;font-size:18px}
-.note{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;font-size:12px;color:#795548;margin-bottom:14px;line-height:1.5}
-.note b{color:#e65100}
-.url-item{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid #f0f0f0;font-size:13px}
-.url-item:first-child{border-top:none}
-.url-item a{color:#1a73e8;text-decoration:none;flex:1;word-break:break-all}
-.url-item a:hover{text-decoration:underline}
-.url-item .del-url{background:none;border:none;color:#ea4335;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:4px}
-.url-item .del-url:hover{background:#fce8e6}
-.crawl-one{background:#e8f0fe;color:#1a73e8;border:1px solid #c2d7f5;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
-.crawl-one:hover{background:#c2d7f5}
-.crawl-one:disabled{opacity:.5;cursor:not-allowed}
-.school-urls-header{background:#f8f9fa;padding:10px 14px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e4e6eb}
-.school-urls-header:first-child{border-top:none}
-</style>
-</head>
-<body>
-<div class="hd"><h1>Quan ly Du lieu Tuyen sinh</h1><a href="/">Quay lai Chatbot</a></div>
-<div class="ct">
-<div class="pipe">
-<span class="s">1. Them truong</span><span class="a">&rarr;</span>
-<span class="s">2. Nhap URL</span><span class="a">&rarr;</span>
-<span class="s">3. Crawl</span><span class="a">&rarr;</span>
-<span class="s">4. Embed &rarr; MongoDB</span>
-</div>
-<div class="stats">
-<div class="st"><div class="n" id="sS">-</div><div class="l">Truong</div></div>
-<div class="st"><div class="n" id="sU">-</div><div class="l">URLs</div></div>
-<div class="st"><div class="n" id="sC">-</div><div class="l">Chua crawl</div></div>
-<div class="st err"><div class="n" id="sF">-</div><div class="l">Loi</div></div>
-<div class="st"><div class="n" id="sD">-</div><div class="l">File data</div></div>
-<div class="st"><div class="n" id="sE">-</div><div class="l">Da embed</div></div>
-</div>
-
-<!-- Them truong moi -->
-<div class="card"><div class="ch"><h2>Them truong moi</h2></div><div class="cb">
-<div class="note">
-<b>Ten chinh:</b> Ten chinh thuc cua truong (vd: "Dai hoc Bach Khoa Ha Noi")<br>
-<b>Ten phu / Biet danh:</b> Cac ten goi tat, viet tat. Chatbot dung cac ten nay de nhan biet truong.
-</div>
-<div class="fr"><label>ID truong <span class="hint">(vd: hust, ptit, neu...)</span></label><input id="sId" placeholder="hust"></div>
-<div class="fr"><label>Ten chinh <span class="hint">(ten chinh thuc)</span></label><input id="sNm" placeholder="Dai hoc Bach Khoa Ha Noi"></div>
-<div class="fr"><label>Ten phu / Biet danh <span class="hint">(cach nhau boi dau phay)</span></label><input id="sKw" placeholder="bach khoa, hust, bk, bkhn, dhbk"></div>
-<button class="btn bp" onclick="addSchool()">Them truong</button>
-<table style="margin-top:16px"><thead><tr><th>ID</th><th>Ten chinh</th><th>Ten phu</th><th>URLs</th><th></th></tr></thead>
-<tbody id="sTb"></tbody></table>
-</div></div>
-
-<!-- Them URL -->
-<div class="card"><div class="ch"><h2>Them URL</h2></div><div class="cb">
-<div class="fr"><label>Chon truong</label>
-<select id="selS"><option value="">-- Chon truong --</option></select></div>
-<div class="fr"><label>URLs</label>
-<div id="urlBox"><div class="ur"><input type="url" placeholder="https://..."><button class="rm" onclick="rmU(this)">x</button></div></div>
-<button class="ba" onclick="addU()">+ Them URL</button></div>
-<button class="btn bp" onclick="saveUrls()">Luu URL</button>
-</div></div>
-
-<!-- Danh sach URLs -->
-<div class="card"><div class="ch"><h2>Danh sach URLs</h2>
-<div class="g">
-<select id="filterSchool" onchange="renderUrlList(this.value)" style="width:auto;min-width:160px;padding:6px 10px;font-size:13px">
-<option value="">Tat ca truong</option>
-</select>
-</div></div>
-<div class="cb" style="padding:0" id="urlListContainer"></div></div>
-
-<!-- Xu ly du lieu -->
-<div class="card"><div class="ch"><h2>Xu ly du lieu</h2>
-<div class="g">
-<button class="btn bo" id="cBtn" onclick="crawlAll()">Crawl tat ca chua crawl</button>
-<button class="btn bg" id="eBtn" onclick="embedAll()">Embed &rarr; MongoDB</button>
-</div></div>
-<div class="cb" style="padding:0"><table><thead><tr><th>File</th><th>Truong</th><th>Size</th><th>Trang thai</th></tr></thead>
-<tbody id="dTb"></tbody></table></div></div>
-
-</div>
-<div class="toast" id="toast"></div>
-<script>
-var _schools=[];
-function toast(m,t){t=t||'tok';var e=document.getElementById('toast');e.textContent=m;e.className='toast '+t+' show';setTimeout(function(){e.classList.remove('show')},3500)}
-function fmt(b){return b<1024?b+' B':(b/1024).toFixed(1)+' KB'}
-
-function load(){
-fetch('/admin/api/schools').then(function(r){return r.json()}).then(function(data){
-_schools=data.schools||[];
-document.getElementById('sS').textContent=_schools.length;
-var totalUrls=0,totalUncrawled=0,totalFailed=0;
-_schools.forEach(function(s){
-  totalUrls+=s.urls.length;
-  var crawled=s.crawled||[];
-  var failed=s.failed||[];
-  s.urls.forEach(function(u){
-    if(failed.indexOf(u)>=0) totalFailed++;
-    else if(crawled.indexOf(u)<0) totalUncrawled++;
-  });
-});
-document.getElementById('sU').textContent=totalUrls;
-document.getElementById('sC').textContent=totalUncrawled;
-document.getElementById('sF').textContent=totalFailed;
-
-// School table
-var st=document.getElementById('sTb');
-if(_schools.length){
-  var rows='';
-  _schools.forEach(function(s){
-    var kws=s.keywords.map(function(k){return '<span class="kw">'+k+'</span>'}).join(' ');
-    var fl=(s.failed||[]).length;
-    var extra=fl>0?' <span class="badge bred">'+fl+' loi</span>':'';
-    rows+='<tr><td><strong>'+s.school_id+'</strong></td><td>'+s.name+'</td><td>'+kws+'</td><td>'+s.urls.length+' urls ('+s.crawled.length+' crawled)'+extra+'</td><td><button class="btn bd bs" onclick="delSchool(\''+s.school_id+'\')">Xoa</button></td></tr>';
-  });
-  st.innerHTML=rows;
-}else{
-  st.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:#999">Chua co truong nao</td></tr>';
-}
-
-// Dropdowns
-var sel=document.getElementById('selS');
-sel.innerHTML='<option value="">-- Chon truong --</option>';
-var fsel=document.getElementById('filterSchool');
-var curF=fsel.value;
-fsel.innerHTML='<option value="">Tat ca truong</option>';
-_schools.forEach(function(s){
-  sel.innerHTML+='<option value="'+s.school_id+'">'+s.name+'</option>';
-  fsel.innerHTML+='<option value="'+s.school_id+'">'+s.name+'</option>';
-});
-fsel.value=curF;
-
-renderUrlList(curF);
-
-// Data files
-fetch('/admin/api/data-files').then(function(r){return r.json()}).then(function(data2){
-  var files=data2.files||[];
-  var done=files.filter(function(f){return f.processed}).length;
-  document.getElementById('sD').textContent=files.length;
-  document.getElementById('sE').textContent=done;
-  var dt=document.getElementById('dTb');
-  if(files.length){
-    var frows='';
-    files.forEach(function(f){
-      frows+='<tr><td>'+f.filename+'</td><td><span class="badge bv">'+f.school+'</span></td><td>'+fmt(f.size)+'</td><td>'+(f.processed?'<span class="badge bdn">Da embed</span>':'<span class="badge bw">Cho embed</span>')+'</td></tr>';
-    });
-    dt.innerHTML=frows;
-  }else{
-    dt.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:#999">Chua co du lieu</td></tr>';
-  }
-});
-});
-}
-
-function renderUrlList(filterSid){
-var container=document.getElementById('urlListContainer');
-var filtered=_schools;
-if(filterSid) filtered=_schools.filter(function(s){return s.school_id===filterSid});
-
-var hasUrls=false;
-filtered.forEach(function(s){if(s.urls.length)hasUrls=true});
-if(!filtered.length||!hasUrls){
-  container.innerHTML='<div style="padding:20px;text-align:center;color:#999">Chua co URL nao</div>';
-  return;
-}
-
-var html='';
-filtered.forEach(function(s){
-  if(!s.urls.length) return;
-  var crawledSet=s.crawled||[];
-  var failedSet=s.failed||[];
-  var uncrawled=0,failedCount=0;
-  s.urls.forEach(function(u){
-    if(failedSet.indexOf(u)>=0) failedCount++;
-    else if(crawledSet.indexOf(u)<0) uncrawled++;
-  });
-
-  // Header
-  var statusHtml='';
-  if(failedCount>0) statusHtml+='<span class="badge bred">'+failedCount+' loi</span> ';
-  if(uncrawled>0) statusHtml+='<span class="badge bw">'+uncrawled+' chua crawl</span>';
-  if(failedCount===0&&uncrawled===0) statusHtml='<span class="badge bdn">Da crawl het</span>';
-  html+='<div class="school-urls-header"><span><span class="badge bv">'+s.school_id+'</span> '+s.name+' - '+s.urls.length+' URLs</span><span>'+statusHtml+'</span></div>';
-
-  // URL rows
-  s.urls.forEach(function(url){
-    var eu=encodeURIComponent(url);
-    var isCrawled=crawledSet.indexOf(url)>=0;
-    var isFailed=failedSet.indexOf(url)>=0;
-    var badge,actionBtn;
-
-    if(isFailed){
-      badge='<span class="badge bred" style="min-width:75px;text-align:center">Loi</span>';
-      actionBtn='';
-    } else if(isCrawled){
-      badge='<span class="badge bdn" style="min-width:75px;text-align:center">Da crawl</span>';
-      actionBtn='';
-    } else {
-      badge='<span class="badge bw" style="min-width:75px;text-align:center">Cho crawl</span>';
-      actionBtn='<button class="crawl-one" id="cb_'+eu+'" onclick="crawlOne(\''+s.school_id+'\',\''+eu+'\')">Crawl</button>';
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Quan ly Du lieu</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
     }
 
-    html+='<div class="url-item">'+badge+' <a href="'+url+'" target="_blank">'+url+'</a>'+actionBtn+'<button class="del-url" onclick="delUrl(\''+s.school_id+'\',\''+eu+'\')" title="Xoa URL">x</button></div>';
-  });
-});
-container.innerHTML=html;
-}
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5
+    }
 
-function crawlOne(sid,eu){
-var btn=document.getElementById('cb_'+eu);
-if(btn){btn.disabled=true;btn.innerHTML='<span class="lds"></span>';}
-var url=decodeURIComponent(eu);
-fetch('/admin/api/crawl-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({school_id:sid,url:url})}).then(function(r){return r.json()}).then(function(d){
-  if(d.success) toast('Crawl OK: '+d.filename);
-  else toast('Loi: '+url,'terr');
-  load();
-});
-}
+    .hd {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
 
-function addSchool(){
-var id=document.getElementById('sId').value.trim().toLowerCase();
-var nm=document.getElementById('sNm').value.trim();
-var kw=document.getElementById('sKw').value.split(',').map(function(k){return k.trim().toLowerCase()}).filter(Boolean);
-if(!id)return toast('Can co ID truong','terr');
-if(!nm)return toast('Can nhap ten chinh','terr');
-if(!kw.length)return toast('Can nhap it nhat 1 ten phu','terr');
-fetch('/admin/api/schools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({school_id:id,name:nm,keywords:kw})}).then(function(){
-  toast('Da them truong: '+nm);
-  document.getElementById('sId').value='';document.getElementById('sNm').value='';document.getElementById('sKw').value='';
-  load();
-});
-}
+    .hd h1 {
+      font-size: 20px
+    }
 
-function delSchool(id){if(!confirm('Xoa truong "'+id+'"?'))return;fetch('/admin/api/schools/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({school_id:id})}).then(function(){toast('Da xoa truong');load()})}
+    .hd a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px
+    }
 
-function delUrl(sid,eu){
-var url=decodeURIComponent(eu);
-if(!confirm('Xoa URL nay?'))return;
-fetch('/admin/api/delete-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({school_id:sid,url:url})}).then(function(){toast('Da xoa URL');load()});
-}
+    .ct {
+      max-width: 960px;
+      margin: 24px auto;
+      padding: 0 16px
+    }
 
-function addU(){var d=document.getElementById('urlBox');var r=document.createElement('div');r.className='ur';r.innerHTML='<input type="url" placeholder="https://..."><button class="rm" onclick="rmU(this)">x</button>';d.appendChild(r)}
-function rmU(b){if(document.querySelectorAll('.ur').length>1)b.parentElement.remove()}
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+      margin-bottom: 20px
+    }
 
-function saveUrls(){
-var sid=document.getElementById('selS').value;
-var inputs=document.querySelectorAll('.ur input');
-var urls=[];
-for(var i=0;i<inputs.length;i++){var v=inputs[i].value.trim();if(v)urls.push(v)}
-if(!sid)return toast('Chon truong truoc','terr');
-if(!urls.length)return toast('Nhap it nhat 1 URL','terr');
-fetch('/admin/api/add-urls',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({school_id:sid,urls:urls})}).then(function(r){return r.json()}).then(function(d){
-  if(d.success){toast('Da them '+d.count+' URLs');document.getElementById('urlBox').innerHTML='<div class="ur"><input type="url" placeholder="https://..."><button class="rm" onclick="rmU(this)">x</button></div>';load()}
-  else toast(d.error,'terr');
-});
-}
+    .ch {
+      padding: 14px 20px;
+      border-bottom: 1px solid #e4e6eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
 
-function crawlAll(){
-var b=document.getElementById('cBtn');b.disabled=true;b.innerHTML='<span class="ld"></span>Dang crawl...';
-fetch('/admin/api/crawl',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json()}).then(function(d){
-  toast('Crawl xong: '+d.crawled+' trang, '+d.failed+' loi');b.disabled=false;b.textContent='Crawl tat ca chua crawl';load();
-});
-}
+    .ch h2 {
+      font-size: 16px;
+      color: #1a73e8
+    }
 
-function embedAll(){
-var b=document.getElementById('eBtn');b.disabled=true;b.innerHTML='<span class="ld"></span>Dang embed...';
-fetch('/admin/api/embed',{method:'POST',headers:{'Content-Type':'application/json'}}).then(function(r){return r.json()}).then(function(d){
-  if(d.processed>0)toast('Embed xong: '+d.processed+' files, '+d.chunks+' chunks');else toast('Khong co file moi','tinfo');
-  b.disabled=false;b.textContent='Embed -> MongoDB';load();
-});
-}
+    .cb {
+      padding: 20px
+    }
 
-load();
-</script>
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #1a1a1a
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #65676b;
+      font-weight: 400;
+      margin-left: 4px
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid #e4e6eb;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #1a73e8
+    }
+
+    .fr {
+      margin-bottom: 14px
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
+    .bp {
+      background: #1a73e8;
+      color: #fff
+    }
+
+    .bg {
+      background: #0f9d58;
+      color: #fff
+    }
+
+    .bo {
+      background: #f9ab00;
+      color: #fff
+    }
+
+    .bd {
+      background: #ea4335;
+      color: #fff
+    }
+
+    .bs {
+      padding: 6px 14px;
+      font-size: 12px
+    }
+
+    .btn:disabled {
+      opacity: .5
+    }
+
+    .g {
+      display: flex;
+      gap: 8px
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px
+    }
+
+    th {
+      background: #f8f9fa;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #65676b;
+      text-transform: uppercase
+    }
+
+    td {
+      padding: 10px 14px;
+      border-top: 1px solid #e4e6eb
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600
+    }
+
+    .bv {
+      background: #e8f0fe;
+      color: #1a73e8
+    }
+
+    .bdn {
+      background: #e6f4ea;
+      color: #0f9d58
+    }
+
+    .bw {
+      background: #fef7e0;
+      color: #f9ab00
+    }
+
+    .bred {
+      background: #fce8e6;
+      color: #ea4335
+    }
+
+    .kw {
+      display: inline-block;
+      background: #e8f0fe;
+      color: #1a73e8;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin: 2px
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 14px 24px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+      transform: translateX(120%);
+      transition: transform .3s
+    }
+
+    .toast.show {
+      transform: translateX(0)
+    }
+
+    .tok {
+      background: #0f9d58
+    }
+
+    .terr {
+      background: #ea4335
+    }
+
+    .tinfo {
+      background: #1a73e8
+    }
+
+    .ur {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px
+    }
+
+    .ur input {
+      flex: 1
+    }
+
+    .ur .rm {
+      width: 38px;
+      height: 38px;
+      border: 2px solid #e4e6eb;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .ba {
+      border: 2px dashed #c2d7f5;
+      background: #f8fbff;
+      color: #1a73e8;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+      text-align: center
+    }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap
+    }
+
+    .st {
+      flex: 1;
+      min-width: 80px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+      text-align: center
+    }
+
+    .st .n {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a73e8
+    }
+
+    .st .l {
+      font-size: 12px;
+      color: #65676b
+    }
+
+    .st.err .n {
+      color: #ea4335
+    }
+
+    .ld {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: sp .8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px
+    }
+
+    .lds {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #1a73e8;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: sp .8s linear infinite;
+      vertical-align: middle
+    }
+
+    @keyframes sp {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .pipe {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 14px 20px;
+      background: #fff;
+      border-radius: 10px;
+      font-size: 13px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+      flex-wrap: wrap
+    }
+
+    .pipe .s {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: #f8f9fa;
+      border: 1px solid #e4e6eb;
+      font-weight: 500
+    }
+
+    .pipe .a {
+      color: #999;
+      font-size: 18px
+    }
+
+    .note {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #795548;
+      margin-bottom: 14px;
+      line-height: 1.5
+    }
+
+    .note b {
+      color: #e65100
+    }
+
+    .url-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-top: 1px solid #f0f0f0;
+      font-size: 13px
+    }
+
+    .url-item:first-child {
+      border-top: none
+    }
+
+    .url-item a {
+      color: #1a73e8;
+      text-decoration: none;
+      flex: 1;
+      word-break: break-all
+    }
+
+    .url-item a:hover {
+      text-decoration: underline
+    }
+
+    .url-item .del-url {
+      background: none;
+      border: none;
+      color: #ea4335;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px
+    }
+
+    .url-item .del-url:hover {
+      background: #fce8e6
+    }
+
+    .crawl-one {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: 1px solid #c2d7f5;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap
+    }
+
+    .crawl-one:hover {
+      background: #c2d7f5
+    }
+
+    .crawl-one:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+
+    .school-urls-header {
+      background: #f8f9fa;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 2px solid #e4e6eb
+    }
+
+    .school-urls-header:first-child {
+      border-top: none
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hd">
+    <h1>Quan ly Du lieu Tuyen sinh</h1><a href="/">Quay lai Chatbot</a>
+  </div>
+  <div class="ct">
+    <div class="pipe">
+      <span class="s">1. Them truong</span><span class="a">&rarr;</span>
+      <span class="s">2. Nhap URL</span><span class="a">&rarr;</span>
+      <span class="s">3. Crawl</span><span class="a">&rarr;</span>
+      <span class="s">4. Embed &rarr; MongoDB</span>
+    </div>
+    <div class="stats">
+      <div class="st">
+        <div class="n" id="sS">-</div>
+        <div class="l">Truong</div>
+      </div>
+      <div class="st">
+        <div class="n" id="sU">-</div>
+        <div class="l">URLs</div>
+      </div>
+      <div class="st">
+        <div class="n" id="sC">-</div>
+        <div class="l">Chua crawl</div>
+      </div>
+      <div class="st err">
+        <div class="n" id="sF">-</div>
+        <div class="l">Loi</div>
+      </div>
+      <div class="st">
+        <div class="n" id="sD">-</div>
+        <div class="l">File data</div>
+      </div>
+      <div class="st">
+        <div class="n" id="sE">-</div>
+        <div class="l">Da embed</div>
+      </div>
+    </div>
+
+    <!-- Them truong moi -->
+    <div class="card">
+      <div class="ch">
+        <h2>Them truong moi</h2>
+      </div>
+      <div class="cb">
+        <div class="note">
+          <b>Ten chinh:</b> Ten chinh thuc cua truong (vd: "Dai hoc Bach Khoa Ha Noi")<br>
+          <b>Ten phu / Biet danh:</b> Cac ten goi tat, viet tat. Chatbot dung cac ten nay de nhan biet truong.
+        </div>
+        <div class="fr"><label>ID truong <span class="hint">(vd: hust, ptit, neu...)</span></label><input id="sId"
+            placeholder="hust"></div>
+        <div class="fr"><label>Ten chinh <span class="hint">(ten chinh thuc)</span></label><input id="sNm"
+            placeholder="Dai hoc Bach Khoa Ha Noi"></div>
+        <div class="fr"><label>Ten phu / Biet danh <span class="hint">(cach nhau boi dau phay)</span></label><input
+            id="sKw" placeholder="bach khoa, hust, bk, bkhn, dhbk"></div>
+        <button class="btn bp" onclick="addSchool()">Them truong</button>
+        <table style="margin-top:16px">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Ten chinh</th>
+              <th>Ten phu</th>
+              <th>URLs</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sTb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Them URL -->
+    <div class="card">
+      <div class="ch">
+        <h2>Them URL</h2>
+      </div>
+      <div class="cb">
+        <div class="fr"><label>Chon truong</label>
+          <select id="selS">
+            <option value="">-- Chon truong --</option>
+          </select>
+        </div>
+        <div class="fr"><label>URLs</label>
+          <div id="urlBox">
+            <div class="ur"><input type="url" placeholder="https://..."><button class="rm"
+                onclick="rmU(this)">x</button></div>
+          </div>
+          <button class="ba" onclick="addU()">+ Them URL</button>
+        </div>
+        <button class="btn bp" onclick="saveUrls()">Luu URL</button>
+      </div>
+    </div>
+
+    <!-- Danh sach URLs -->
+    <div class="card">
+      <div class="ch">
+        <h2>Danh sach URLs</h2>
+        <div class="g">
+          <select id="filterSchool" onchange="renderUrlList(this.value)"
+            style="width:auto;min-width:160px;padding:6px 10px;font-size:13px">
+            <option value="">Tat ca truong</option>
+          </select>
+        </div>
+      </div>
+      <div class="cb" style="padding:0" id="urlListContainer"></div>
+    </div>
+
+    <!-- Xu ly du lieu -->
+    <div class="card">
+      <div class="ch">
+        <h2>Xu ly du lieu</h2>
+        <div class="g">
+          <button class="btn bo" id="cBtn" onclick="crawlAll()">Crawl tat ca chua crawl</button>
+          <button class="btn bg" id="eBtn" onclick="embedAll()">Embed &rarr; MongoDB</button>
+        </div>
+      </div>
+      <div class="cb" style="padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Truong</th>
+              <th>Size</th>
+              <th>Trang thai</th>
+            </tr>
+          </thead>
+          <tbody id="dTb"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    var _schools = [];
+    function toast(m, t) { t = t || 'tok'; var e = document.getElementById('toast'); e.textContent = m; e.className = 'toast ' + t + ' show'; setTimeout(function () { e.classList.remove('show') }, 3500) }
+    function fmt(b) { return b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB' }
+
+    function load() {
+      fetch('/admin/api/schools').then(function (r) { return r.json() }).then(function (data) {
+        _schools = data.schools || [];
+        document.getElementById('sS').textContent = _schools.length;
+        var totalUrls = 0, totalUncrawled = 0, totalFailed = 0;
+        _schools.forEach(function (s) {
+          totalUrls += s.urls.length;
+          var crawled = s.crawled || [];
+          var failed = s.failed || [];
+          s.urls.forEach(function (u) {
+            if (failed.indexOf(u) >= 0) totalFailed++;
+            else if (crawled.indexOf(u) < 0) totalUncrawled++;
+          });
+        });
+        document.getElementById('sU').textContent = totalUrls;
+        document.getElementById('sC').textContent = totalUncrawled;
+        document.getElementById('sF').textContent = totalFailed;
+
+        // School table
+        function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        var st = document.getElementById('sTb');
+        if (_schools.length) {
+          var rows = '';
+          _schools.forEach(function (s) {
+            var kws = s.keywords.map(function (k) { return '<span class="kw">' + esc(k) + '</span>' }).join(' ');
+            var fl = (s.failed || []).length;
+            var extra = fl > 0 ? ' <span class="badge bred">' + fl + ' loi</span>' : '';
+            rows += '<tr><td><strong>' + esc(s.school_id) + '</strong></td><td>' + esc(s.name) + '</td><td>' + kws + '</td><td>' + s.urls.length + ' urls (' + s.crawled.length + ' crawled)' + extra + '</td><td><button class="btn bd bs" onclick="delSchool(\'' + esc(s.school_id) + '\')">Xoa</button></td></tr>';
+          });
+          st.innerHTML = rows;
+        } else {
+          st.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999">Chua co truong nao</td></tr>';
+        }
+
+        // Dropdowns
+        var sel = document.getElementById('selS');
+        sel.innerHTML = '<option value="">-- Chon truong --</option>';
+        var fsel = document.getElementById('filterSchool');
+        var curF = fsel.value;
+        fsel.innerHTML = '<option value="">Tat ca truong</option>';
+        _schools.forEach(function (s) {
+          sel.innerHTML += '<option value="' + s.school_id + '">' + s.name + '</option>';
+          fsel.innerHTML += '<option value="' + s.school_id + '">' + s.name + '</option>';
+        });
+        fsel.value = curF;
+
+        renderUrlList(curF);
+
+        // Data files
+        fetch('/admin/api/data-files').then(function (r) { return r.json() }).then(function (data2) {
+          var files = data2.files || [];
+          var done = files.filter(function (f) { return f.processed }).length;
+          document.getElementById('sD').textContent = files.length;
+          document.getElementById('sE').textContent = done;
+          var dt = document.getElementById('dTb');
+          if (files.length) {
+            var frows = '';
+            files.forEach(function (f) {
+              frows += '<tr><td>' + f.filename + '</td><td><span class="badge bv">' + f.school + '</span></td><td>' + fmt(f.size) + '</td><td>' + (f.processed ? '<span class="badge bdn">Da embed</span>' : '<span class="badge bw">Cho embed</span>') + '</td></tr>';
+            });
+            dt.innerHTML = frows;
+          } else {
+            dt.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#999">Chua co du lieu</td></tr>';
+          }
+        });
+      });
+    }
+
+    function renderUrlList(filterSid) {
+      var container = document.getElementById('urlListContainer');
+      var filtered = _schools;
+      if (filterSid) filtered = _schools.filter(function (s) { return s.school_id === filterSid });
+
+      var hasUrls = false;
+      filtered.forEach(function (s) { if (s.urls.length) hasUrls = true });
+      if (!filtered.length || !hasUrls) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:#999">Chua co URL nao</div>';
+        return;
+      }
+
+      var html = '';
+      filtered.forEach(function (s) {
+        if (!s.urls.length) return;
+        var crawledSet = s.crawled || [];
+        var failedSet = s.failed || [];
+        var uncrawled = 0, failedCount = 0;
+        s.urls.forEach(function (u) {
+          if (failedSet.indexOf(u) >= 0) failedCount++;
+          else if (crawledSet.indexOf(u) < 0) uncrawled++;
+        });
+
+        // Header
+        var statusHtml = '';
+        if (failedCount > 0) statusHtml += '<span class="badge bred">' + failedCount + ' loi</span> ';
+        if (uncrawled > 0) statusHtml += '<span class="badge bw">' + uncrawled + ' chua crawl</span>';
+        if (failedCount === 0 && uncrawled === 0) statusHtml = '<span class="badge bdn">Da crawl het</span>';
+        html += '<div class="school-urls-header"><span><span class="badge bv">' + s.school_id + '</span> ' + s.name + ' - ' + s.urls.length + ' URLs</span><span>' + statusHtml + '</span></div>';
+
+        // URL rows
+        s.urls.forEach(function (url) {
+          var eu = encodeURIComponent(url);
+          var isCrawled = crawledSet.indexOf(url) >= 0;
+          var isFailed = failedSet.indexOf(url) >= 0;
+          var badge, actionBtn;
+
+          if (isFailed) {
+            badge = '<span class="badge bred" style="min-width:75px;text-align:center">Loi</span>';
+            actionBtn = '';
+          } else if (isCrawled) {
+            badge = '<span class="badge bdn" style="min-width:75px;text-align:center">Da crawl</span>';
+            actionBtn = '';
+          } else {
+            badge = '<span class="badge bw" style="min-width:75px;text-align:center">Cho crawl</span>';
+            actionBtn = '<button class="crawl-one" id="cb_' + eu + '" onclick="crawlOne(\'' + s.school_id + '\',\'' + eu + '\')">Crawl</button>';
+          }
+
+          html += '<div class="url-item">' + badge + ' <a href="' + url + '" target="_blank">' + url + '</a>' + actionBtn + '<button class="del-url" onclick="delUrl(\'' + s.school_id + '\',\'' + eu + '\')" title="Xoa URL">x</button></div>';
+        });
+      });
+      container.innerHTML = html;
+    }
+
+    function crawlOne(sid, eu) {
+      var btn = document.getElementById('cb_' + eu);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="lds"></span>'; }
+      var url = decodeURIComponent(eu);
+      fetch('/admin/api/crawl-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid, url: url }) }).then(function (r) { return r.json() }).then(function (d) {
+        if (d.success) toast('Crawl OK: ' + d.filename);
+        else toast('Loi: ' + url, 'terr');
+        load();
+      });
+    }
+
+    function addSchool() {
+      var id = document.getElementById('sId').value.trim().toLowerCase();
+      var nm = document.getElementById('sNm').value.trim();
+      var kw = document.getElementById('sKw').value.split(',').map(function (k) { return k.trim().toLowerCase() }).filter(Boolean);
+      if (!id) return toast('Can co ID truong', 'terr');
+      if (!nm) return toast('Can nhap ten chinh', 'terr');
+      if (!kw.length) return toast('Can nhap it nhat 1 ten phu', 'terr');
+      fetch('/admin/api/schools', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: id, name: nm, keywords: kw }) }).then(function () {
+        toast('Da them truong: ' + nm);
+        document.getElementById('sId').value = ''; document.getElementById('sNm').value = ''; document.getElementById('sKw').value = '';
+        load();
+      });
+    }
+
+    function delSchool(id) { if (!confirm('Xoa truong "' + id + '"?')) return; fetch('/admin/api/schools/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: id }) }).then(function () { toast('Da xoa truong'); load() }) }
+
+    function delUrl(sid, eu) {
+      var url = decodeURIComponent(eu);
+      if (!confirm('Xoa URL nay?')) return;
+      fetch('/admin/api/delete-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid, url: url }) }).then(function () { toast('Da xoa URL'); load() });
+    }
+
+    function addU() { var d = document.getElementById('urlBox'); var r = document.createElement('div'); r.className = 'ur'; r.innerHTML = '<input type="url" placeholder="https://..."><button class="rm" onclick="rmU(this)">x</button>'; d.appendChild(r) }
+    function rmU(b) { if (document.querySelectorAll('.ur').length > 1) b.parentElement.remove() }
+
+    function saveUrls() {
+      var sid = document.getElementById('selS').value;
+      var inputs = document.querySelectorAll('.ur input');
+      var urls = [];
+      for (var i = 0; i < inputs.length; i++) { var v = inputs[i].value.trim(); if (v) urls.push(v) }
+      if (!sid) return toast('Chon truong truoc', 'terr');
+      if (!urls.length) return toast('Nhap it nhat 1 URL', 'terr');
+      fetch('/admin/api/add-urls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid, urls: urls }) }).then(function (r) { return r.json() }).then(function (d) {
+        if (d.success) { toast('Da them ' + d.count + ' URLs'); document.getElementById('urlBox').innerHTML = '<div class="ur"><input type="url" placeholder="https://..."><button class="rm" onclick="rmU(this)">x</button></div>'; load() }
+        else toast(d.error, 'terr');
+      });
+    }
+
+    function crawlAll() {
+      var b = document.getElementById('cBtn'); b.disabled = true; b.innerHTML = '<span class="ld"></span>Dang crawl...';
+      fetch('/admin/api/crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).then(function (r) { return r.json() }).then(function (d) {
+        toast('Crawl xong: ' + d.crawled + ' trang, ' + d.failed + ' loi'); b.disabled = false; b.textContent = 'Crawl tat ca chua crawl'; load();
+      });
+    }
+
+    function embedAll() {
+      var b = document.getElementById('eBtn'); b.disabled = true; b.innerHTML = '<span class="ld"></span>Dang embed...';
+      fetch('/admin/api/embed', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(function (r) { return r.json() }).then(function (d) {
+        if (d.processed > 0) toast('Embed xong: ' + d.processed + ' files, ' + d.chunks + ' chunks'); else toast('Khong co file moi', 'tinfo');
+        b.disabled = false; b.textContent = 'Embed -> MongoDB'; load();
+      });
+    }
+
+    load();
+  </script>
 </body>
+
 </html>
