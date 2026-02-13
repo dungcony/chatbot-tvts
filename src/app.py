@@ -6,14 +6,31 @@ import os
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template
 from services import vector_search, generate_answer
-from models.chat_history import get_collection as get_chat_collection
+from models.chat_history import get_collection as get_chat_collection, get_recent_history
 
 app = Flask(__name__)
 GREETING_KEYWORDS = {"xin chao", "hello", "hi", "chao", "hey", "chao ban", "alo"}
+CONFIRM_KEYWORDS = {"co", "ban co", "co ban", "dung", "dung roi", "ok", "yes", "vang",
+                     "uh", "uhm", "muon", "toi muon", "minh muon", "dong y", "duoc", "được"}
 
 
 def is_greeting(query):
     return query.lower().strip().rstrip("!.") in GREETING_KEYWORDS
+
+
+def is_confirmation(query):
+    return query.lower().strip().rstrip("!.") in CONFIRM_KEYWORDS
+
+
+def detect_school_from_history(session_id):
+    """Tim school da duoc detect trong lich su hoi thoai gan nhat."""
+    from models.school import detect_school
+    history = get_recent_history(session_id, limit=10)
+    for msg in reversed(history):
+        school = detect_school(msg["message"])
+        if school:
+            return school
+    return None
 
 
 def save_chat(session_id, role, message):
@@ -50,6 +67,12 @@ def chat():
         from models.school import detect_school, get_all_schools
         school = detect_school(query)
 
+        # Neu khong detect duoc truong tu query hien tai,
+        # thu tim tu lich su hoi thoai (user da chon truong truoc do)
+        if not school:
+            school = detect_school_from_history(session_id)
+
+        # Neu van khong tim thay truong nao
         if not school:
             schools = get_all_schools()
             lst = "\n".join([f"* **{s['name']}**" for s in schools])
@@ -57,11 +80,23 @@ def chat():
             save_chat(session_id, "bot", answer)
             return jsonify({"answer": answer, "sources": []})
 
-        context_docs = vector_search(query, school=school, num_candidates=150, limit=4)
+        # Lay lich su hoi thoai de truyen vao LLM
+        history = get_recent_history(session_id, limit=6)
+
+        # Neu query qua ngan (vd: chi la ten truong hoac xac nhan),
+        # bo sung context tu lich su
+        effective_query = query
+        if len(query.split()) <= 3 or is_confirmation(query):
+            # Gop cac cau hoi cua user tu lich su de lam query search tot hon
+            user_msgs = [m["message"] for m in history if m["role"] == "user"]
+            if user_msgs:
+                effective_query = " ".join(user_msgs[-3:])  # 3 tin nhan gan nhat
+
+        context_docs = vector_search(effective_query, school=school, num_candidates=150, limit=4)
         if not context_docs:
             return jsonify({"answer": "Xin loi, khong tim thay thong tin lien quan.", "sources": []})
 
-        answer = generate_answer(query, context_docs)
+        answer = generate_answer(query, context_docs, history=history)
         save_chat(session_id, "bot", answer)
         sources = [{"content": d["content"][:200], "score": round(d.get("score", 0), 4)} for d in context_docs]
         return jsonify({"answer": answer, "sources": sources})

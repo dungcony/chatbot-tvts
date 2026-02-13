@@ -21,3 +21,15 @@ def get_collection():
         _collection = _client[DB_NAME][COLLECTION_NAME]
         print("MongoDB [chat_history] đã kết nối!")
     return _collection
+
+
+def get_recent_history(session_id, limit=6):
+    """Lay lich su hoi thoai gan nhat cua session."""
+    docs = list(
+        get_collection()
+        .find({"session_id": session_id}, {"_id": 0, "role": 1, "message": 1})
+        .sort("timestamp", -1)
+        .limit(limit)
+    )
+    docs.reverse()
+    return docs

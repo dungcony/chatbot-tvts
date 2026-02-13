@@ -279,6 +279,7 @@
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         const welcome = document.getElementById('welcome');
+        const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
         function askSuggestion(btn) {
             userInput.value = btn.textContent;
@@ -322,7 +323,7 @@
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({ message, session_id: sessionId })
                 });
 
                 const data = await response.json();

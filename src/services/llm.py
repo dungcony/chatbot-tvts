@@ -8,29 +8,43 @@ import requests
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL
 
 
-def generate_answer(query: str, context_docs: list) -> str:
+def generate_answer(query: str, context_docs: list, history: list = None) -> str:
     """
     Dùng Ollama tổng hợp thông tin từ context và sinh câu trả lời.
 
     Args:
         query: Câu hỏi của người dùng
         context_docs: Danh sách documents từ vector search
+        history: Lịch sử hội thoại gần nhất [{role, message}]
 
     Returns:
         str: Câu trả lời từ Ollama
     """
     context = "\n\n---\n\n".join([doc["content"] for doc in context_docs])
 
+    # Xay dung lich su hoi thoai
+    history_text = ""
+    if history:
+        history_lines = []
+        for msg in history:
+            role = "Người dùng" if msg["role"] == "user" else "Trợ lý"
+            history_lines.append(f"{role}: {msg['message']}")
+        history_text = "\n".join(history_lines)
+
     prompt = f"""Bạn là trợ lý tư vấn tuyển sinh đại học. Hãy trả lời câu hỏi của người dùng
 dựa trên thông tin được cung cấp bên dưới. Trả lời bằng tiếng Việt, chính xác và dễ hiểu.
 
 Nếu thông tin không đủ để trả lời, hãy nói rõ là bạn không có đủ thông tin.
 Không bịa thông tin. Chỉ trả lời dựa trên dữ liệu được cung cấp.
+Khi người dùng xác nhận (ví dụ: "có", "đúng", "ok"), hãy cung cấp thông tin tuyển sinh tổng quan dựa trên dữ liệu.
+
+LỊCH SỬ HỘI THOẠI:
+{history_text if history_text else "(Không có)"}
 
 THÔNG TIN THAM KHẢO:
 {context}
 
-CÂU HỎI: {query}
+CÂU HỎI HIỆN TẠI: {query}
 
 TRẢ LỜI:"""
 
