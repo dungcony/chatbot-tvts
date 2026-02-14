@@ -49,7 +49,8 @@ def process_files(filenames=None):
 
     embedding_model = get_embedding_model()
     collection = get_collection()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=400)
+    # Giam overlap tu 50% -> 20% de giam trung lap
+    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
 
     total_chunks = 0
     processed = []

@@ -536,6 +536,30 @@
       </div>
     </div>
 
+    <!-- Deep Crawl -->
+    <div class="card">
+      <div class="ch">
+        <h2>Deep Crawl</h2>
+      </div>
+      <div class="cb">
+        <p style="font-size:13px;color:#666;margin-bottom:12px">Crawl 1 URL va tu dong tim cac link lien quan cung
+          domain de crawl tiep.</p>
+        <div class="fr"><label>Chon truong</label>
+          <select id="dcSchool">
+            <option value="">-- Chon truong --</option>
+          </select>
+        </div>
+        <div class="fr"><label>URL bat dau</label>
+          <input type="url" id="dcUrl" placeholder="https://tuyensinh.ptit.edu.vn/gioi-thieu/">
+        </div>
+        <div class="fr"><label>So trang toi da</label>
+          <input type="number" id="dcMax" value="30" min="1" max="100" style="width:100px">
+        </div>
+        <button class="btn bo" id="dcBtn" onclick="deepCrawl()">Bat dau Deep Crawl</button>
+        <div id="dcResult" style="margin-top:12px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
     <!-- Danh sach URLs -->
     <div class="card">
       <div class="ch">
@@ -621,9 +645,12 @@
         var fsel = document.getElementById('filterSchool');
         var curF = fsel.value;
         fsel.innerHTML = '<option value="">Tat ca truong</option>';
+        var dcsel = document.getElementById('dcSchool');
+        dcsel.innerHTML = '<option value="">-- Chon truong --</option>';
         _schools.forEach(function (s) {
           sel.innerHTML += '<option value="' + s.school_id + '">' + s.name + '</option>';
           fsel.innerHTML += '<option value="' + s.school_id + '">' + s.name + '</option>';
+          dcsel.innerHTML += '<option value="' + s.school_id + '">' + s.name + '</option>';
         });
         fsel.value = curF;
 
@@ -757,6 +784,28 @@
       fetch('/admin/api/crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).then(function (r) { return r.json() }).then(function (d) {
         toast('Crawl xong: ' + d.crawled + ' trang, ' + d.failed + ' loi'); b.disabled = false; b.textContent = 'Crawl tat ca chua crawl'; load();
       });
+    }
+
+    function deepCrawl() {
+      var sid = document.getElementById('dcSchool').value;
+      var url = document.getElementById('dcUrl').value.trim();
+      var max = parseInt(document.getElementById('dcMax').value) || 30;
+      if (!sid || !url) { toast('Chon truong va nhap URL', 'terr'); return; }
+      var b = document.getElementById('dcBtn'); b.disabled = true; b.innerHTML = '<span class="ld"></span>Dang deep crawl...';
+      var res = document.getElementById('dcResult'); res.style.display = 'block'; res.innerHTML = 'Dang crawl, vui long doi...';
+      fetch('/admin/api/deep-crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid, url: url, max_pages: max }) })
+        .then(function (r) { return r.json() })
+        .then(function (d) {
+          if (d.error) { res.innerHTML = '<span style="color:red">' + esc(d.error) + '</span>'; }
+          else {
+            res.innerHTML = '<strong>Ket qua:</strong> Crawl ' + d.crawled + ' trang, ' + d.failed + ' loi, tim them ' + d.new_urls_found + ' URLs moi';
+            if (d.new_urls && d.new_urls.length > 0) {
+              res.innerHTML += '<br><strong>URLs moi:</strong><ul>' + d.new_urls.map(function (u) { return '<li style="word-break:break-all">' + esc(u) + '</li>' }).join('') + '</ul>';
+            }
+          }
+          toast('Deep crawl xong: ' + d.crawled + ' trang'); b.disabled = false; b.textContent = 'Bat dau Deep Crawl'; load();
+        })
+        .catch(function () { res.innerHTML = '<span style="color:red">Loi ket noi</span>'; b.disabled = false; b.textContent = 'Bat dau Deep Crawl'; });
     }
 
     function embedAll() {

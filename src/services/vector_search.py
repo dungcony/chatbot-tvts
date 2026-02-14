@@ -6,7 +6,7 @@ from models.document import get_collection, VECTOR_INDEX_NAME
 from services.embedding import get_embedding_model
 
 
-def vector_search(query, school=None, num_candidates=150, limit=4, score_threshold=0.6):
+def vector_search(query, school=None, num_candidates=200, limit=6, score_threshold=0.7):
     embedding_model = get_embedding_model()
     query_vector = embedding_model.embed_query(query)
     collection = get_collection()

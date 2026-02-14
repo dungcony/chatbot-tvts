@@ -93,7 +93,7 @@ def chat():
             if user_msgs:
                 effective_query = " ".join(user_msgs[-3:])  # 3 tin nhan gan nhat
 
-        context_docs = vector_search(effective_query, school=school, num_candidates=150, limit=4)
+        context_docs = vector_search(effective_query, school=school, num_candidates=200, limit=6)
         if not context_docs:
             return jsonify({"answer": "Xin loi, khong tim thay thong tin lien quan.", "sources": []})
 
@@ -179,6 +179,18 @@ def api_crawl():
     sid = (request.get_json() or {}).get("school_id", None)
     from scripts.crawl_data import crawl_school
     return jsonify(crawl_school(sid))
+
+@app.route("/admin/api/deep-crawl", methods=["POST"])
+def api_deep_crawl():
+    """Deep crawl: crawl 1 URL va tu dong tim link con de crawl tiep."""
+    d = request.get_json()
+    sid = d.get("school_id", "")
+    url = d.get("url", "")
+    max_pages = d.get("max_pages", 30)
+    if not sid or not url:
+        return jsonify({"error": "Thieu school_id hoac url"}), 400
+    from scripts.crawl_data import deep_crawl
+    return jsonify(deep_crawl(sid, url, max_pages=max_pages))
 
 @app.route("/admin/api/embed", methods=["POST"])
 def api_embed():
