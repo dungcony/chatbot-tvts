@@ -84,16 +84,25 @@ def chat():
         # Lay lich su hoi thoai de truyen vao LLM
         history = get_recent_history(session_id, limit=6)
 
-        # Neu query qua ngan (vd: chi la ten truong hoac xac nhan),
-        # bo sung context tu lich su
-        effective_query = query
-        if len(query.split()) <= 3 or is_confirmation(query):
-            # Gop cac cau hoi cua user tu lich su de lam query search tot hon
-            user_msgs = [m["message"] for m in history if m["role"] == "user"]
-            if user_msgs:
-                effective_query = " ".join(user_msgs[-3:])  # 3 tin nhan gan nhat
+        # Luon ghep ngữ canh hoi thoai vao cau search: 2 cau user gan nhat (da gom ca cau hien tai sau save_chat)
+        # de retrieval khong mat chu de (vd: "diem chuan CNTT" -> "cac nam khac thi sao" van lay duoc chunk 2020, 2021)
+        user_msgs = [m["message"] for m in history if m["role"] == "user"]
+        if user_msgs:
+            prev = user_msgs[-2:] if len(user_msgs) >= 2 else user_msgs
+            effective_query = " ".join(prev)
+            if len(effective_query) > 500:
+                effective_query = effective_query[:500]
+        else:
+            effective_query = query
 
-        context_docs = vector_search(effective_query, school=school, num_candidates=150, limit=4)
+        # Tai lieu PTIT dung "diem trung tuyen" -> khi user hoi "diem chuan" can ghep them de retrieval match
+        q_lower = effective_query.lower()
+        if "điểm chuẩn" in q_lower or "diem chuan" in q_lower:
+            effective_query = effective_query + " điểm trúng tuyển bảng điểm chuẩn"
+        if any(k in q_lower for k in ("các năm khác", "cac nam khac", "năm trước", "nam truoc", "năm khác", "nam khac", "cac nam truoc")):
+            effective_query = effective_query + " điểm trúng tuyển 2020 2021 2022 2023 2024 các năm trước"
+
+        context_docs = vector_search(effective_query, school=school, num_candidates=200, limit=6)
         if not context_docs:
             return jsonify({"answer": "Xin loi, khong tim thay thong tin lien quan.", "sources": []})
 

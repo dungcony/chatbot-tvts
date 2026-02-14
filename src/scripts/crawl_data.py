@@ -1,6 +1,6 @@
 """
 Crawl du lieu tu MongoDB (schools) -> luu vao data/
-Moi URL crawl thanh 1 file: data/{school}_{url_slug}.txt
+Moi URL crawl thanh 1 file: data/{school}_{url_slug}.md (noi dung dang Markdown)
 Ho tro crawl 1 URL don le hoac tat ca.
 """
 import sys, os, re, time
@@ -11,6 +11,14 @@ from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 from urllib.parse import urlparse, urljoin
 from models.school import get_uncrawled_urls, mark_crawled, mark_failed, save_discovered_urls
+
+# Playwright (tuy chon): dung khi trang load noi dung bang JavaScript
+try:
+    from playwright.sync_api import sync_playwright
+    _PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    sync_playwright = None
+    _PLAYWRIGHT_AVAILABLE = False
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
@@ -85,78 +93,144 @@ def discover_links(soup, base_url):
     return found
 
 
+# So giay cho them sau khi trang load de noi dung load bang fetch/XHR kip hien
+PLAYWRIGHT_WAIT_AFTER_LOAD_MS = 3500
+
+
+def _fetch_html_playwright(url, timeout=15000):
+    """Lay HTML sau khi JavaScript chay (can cai: pip install playwright && playwright install chromium)."""
+    if not _PLAYWRIGHT_AVAILABLE:
+        return None
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(url, wait_until="networkidle", timeout=timeout)
+            # Cho them de trang SPA load noi dung qua API/fetch
+            page.wait_for_timeout(PLAYWRIGHT_WAIT_AFTER_LOAD_MS)
+            html = page.content()
+            browser.close()
+            return html
+    except Exception as e:
+        print(f"    WARN Playwright fetch loi: {e}")
+        return None
+
+
+def _html_to_text_and_links(html, url):
+    """
+    Parse HTML thanh (text_cleaned, links, title).
+    Khong kiem tra MIN_CONTENT_LENGTH hay error pattern - do crawl_page xu ly.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    title = soup.title.get_text(strip=True) if soup.title else ""
+    links = discover_links(soup, url)
+
+    listing_count = len(soup.find_all(string=re.compile(r"Xem chi tiết", re.IGNORECASE)))
+    if listing_count >= 3:
+        return None, links, title
+
+    # Chi xoa theo ten the nhung thu that su la rac; giu header/nav de tranh xoa mat noi dung chinh (nhieu trang SPA de noi dung trong header)
+    for tag in soup(["script", "style", "footer", "aside", "iframe", "noscript"]):
+        tag.decompose()
+
+    # Xoa block theo class/id (ke ca header/nav neu la thanh tren dau trang).
+    # KHONG dung "widget" don vi trang Elementor/WordPress dat noi dung chinh trong elementor-widget-text-editor.
+    JUNK_PATTERNS = [
+        "sidebar", "breadcrumb", "related", "comment", "share", "social", "advert", "banner",
+        "site-header", "main-nav", "top-nav", "navbar", "page-header", "menu-nav", "header-nav",
+        "sidebar-widget", "widget-sidebar", "footer-widget", "widget-footer", "wp-widget",
+    ]
+    tags_to_remove = []
+    for tag in soup.find_all(True):
+        try:
+            classes = " ".join(tag.get("class", [])).lower()
+            tag_id = (tag.get("id") or "").lower()
+        except (AttributeError, TypeError):
+            continue
+        if any(p in classes or p in tag_id for p in JUNK_PATTERNS):
+            tags_to_remove.append(tag)
+    for tag in tags_to_remove:
+        try:
+            tag.decompose()
+        except Exception:
+            pass
+
+    try:
+        text = md(str(soup), heading_style="ATX", strip=["img"])
+    except Exception:
+        text = soup.get_text(separator="\n")
+
+    lines = [l.strip() for l in text.splitlines()]
+    cleaned = []
+    prev_blank = False
+    for line in lines:
+        if not line:
+            if not prev_blank:
+                cleaned.append("")
+            prev_blank = True
+        else:
+            cleaned.append(line)
+            prev_blank = False
+    text = "\n".join(cleaned).strip()
+    return text, links, title
+
+
 def crawl_page(url, timeout=15):
     """Crawl 1 trang. Tra ve (text, discovered_links) hoac (None, set())."""
-    req_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    req_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    }
     try:
         resp = requests.get(url, headers=req_headers, timeout=timeout)
         resp.encoding = "utf-8"
         if resp.status_code >= 400:
             print(f"  FAIL [{resp.status_code}] {url}")
             return None, set()
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        # Lay title trang
-        title = soup.title.get_text(strip=True) if soup.title else ""
-
-        # Phat hien links cung domain TRUOC khi xoa tags
-        links = discover_links(soup, url)
-
-        # Phat hien trang listing (chi co danh sach tieu de + "Xem chi tiet", khong co noi dung thuc)
-        listing_count = len(soup.find_all(string=re.compile(r"Xem chi tiết", re.IGNORECASE)))
-        if listing_count >= 3:
-            print(f"  SKIP (trang listing: {listing_count} lan 'Xem chi tiet') {url}")
+        raw_html_len = len(resp.text)
+        text, links, title = _html_to_text_and_links(resp.text, url)
+        if text is None:
+            print(f"  SKIP (trang listing) {url}")
             return None, links
 
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "noscript"]):
-            tag.decompose()
-
-        # Xoa cac block co class/id thuong chua noi dung rac
-        JUNK_PATTERNS = ["sidebar", "breadcrumb", "related", "widget", "comment", "share", "social", "advert", "banner"]
-        for tag in soup.find_all(True):
-            classes = " ".join(tag.get("class", [])).lower()
-            tag_id = (tag.get("id") or "").lower()
-            for pattern in JUNK_PATTERNS:
-                if pattern in classes or pattern in tag_id:
-                    tag.decompose()
-                    break
-
-        # Chuyen HTML -> Markdown (giu heading, table, list)
-        text = md(str(soup), heading_style="ATX", strip=["img"])
-        # Lam sach: xoa dong trang thua, giu toi da 1 dong trang giua cac doan
-        lines = [l.strip() for l in text.splitlines()]
-        cleaned = []
-        prev_blank = False
-        for line in lines:
-            if not line:
-                if not prev_blank:
-                    cleaned.append("")
-                prev_blank = True
-            else:
-                cleaned.append(line)
-                prev_blank = False
-        text = "\n".join(cleaned).strip()
-
-        # Kiem tra soft 404 / trang loi (chi check 1000 ky tu dau de tranh false positive)
         head_lower = text[:1000].lower()
         for pattern in ERROR_PATTERNS:
             if pattern in head_lower:
                 print(f"  SKIP (soft error: '{pattern}') {url}")
                 return None, links
 
-        # Kiem tra noi dung qua ngan
-        if len(text) < MIN_CONTENT_LENGTH:
-            print(f"  SKIP (qua ngan: {len(text)} < {MIN_CONTENT_LENGTH}) {url}")
+        text_len = len(text)
+        skip_display_len = text_len
+        if text_len < MIN_CONTENT_LENGTH:
+            # Thu lai bang Playwright neu trang co ve load bang JS
+            if raw_html_len > 3000 and text_len < 100 and _PLAYWRIGHT_AVAILABLE:
+                print(f"  Thu lai voi Playwright (trang JS): {url}")
+                html_js = _fetch_html_playwright(url, timeout=timeout * 1000)
+                if html_js:
+                    text_js, links_js, title_js = _html_to_text_and_links(html_js, url)
+                    if text_js is not None and len(text_js) >= MIN_CONTENT_LENGTH:
+                        metadata = f"[URL: {url}]"
+                        if title_js:
+                            metadata = f"[{title_js}]\n{metadata}"
+                        return f"{metadata}\n\n{text_js}", links_js
+                    if text_js is not None:
+                        skip_display_len = len(text_js)
+            reason = f"  SKIP (qua ngan: {skip_display_len} < {MIN_CONTENT_LENGTH}) {url}"
+            if raw_html_len > 3000 and text_len < 100:
+                reason += " [Ly do: trang co the load noi dung bang JavaScript - requests chi lay duoc HTML khung]"
+            if not _PLAYWRIGHT_AVAILABLE and raw_html_len > 3000 and text_len < 100:
+                reason += " [Go y: cai Playwright de thu crawl lai: pip install playwright && playwright install chromium]"
+            print(reason)
             return None, links
 
-        # Them metadata vao dau file de giu ngu canh khi chunk
         metadata = f"[URL: {url}]"
         if title:
             metadata = f"[{title}]\n{metadata}"
         text = f"{metadata}\n\n{text}"
-
         return text, links
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"  FAIL crawl {url}: {e}")
         return None, set()
 
@@ -164,7 +238,7 @@ def crawl_page(url, timeout=15):
 def url_to_filename(school_id, url):
     path = urlparse(url).path.strip("/").replace("/", "_") or "trangchu"
     safe = re.sub(r"[^\w\-]", "_", path)[:60]
-    return f"{school_id}_{safe}.txt"
+    return f"{school_id}_{safe}.md"
 
 
 def crawl_single(school_id, url):

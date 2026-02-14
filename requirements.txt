@@ -10,3 +10,6 @@ requests
 beautifulsoup4
 markdownify
 markdown
+
+# Tuy chon: crawl trang load bang JavaScript (pip install playwright && playwright install chromium)
+playwright

@@ -1,8 +1,9 @@
 """
-Pipeline: data/*.txt -> Clean -> Chunking -> Embedding -> MongoDB
+Pipeline: data/*.md (hoac .txt) -> Clean -> Chunking -> Embedding -> MongoDB
+- File crawl luu dang .md (noi dung Markdown); van doc ca .txt cu neu co
 - Tu dong phat hien file moi hoac file thay doi (so sanh hash)
 - Lam sach noi dung truoc khi embed (xoa footer lap, trang rac)
-- Nhan dien truong tu ten file: ptit_trangchu.txt -> school = ptit
+- Nhan dien truong tu ten file: ptit_trangchu.md -> school = ptit
 """
 import sys, os, re, hashlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -16,6 +17,11 @@ from services.embedding import get_embedding_model
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
 # --- NOI DUNG RAC CAN XOA ---
+
+# Bat/tat xoa block menu nav o dau file (danh cho trang co menu * / + / - ngay sau metadata).
+# Dat STRIP_NAV_MENU=0 trong .env hoac False o day neu dung nhieu nguon (Bach Khoa, trang khac).
+STRIP_NAV_MENU = os.getenv("STRIP_NAV_MENU", "1").strip().lower() in ("1", "true", "yes")
+
 # Cac dong bat dau footer (xoa tu dong nay den het file)
 FOOTER_MARKERS = [
     "ĐỊA CHỈ HỌC VIỆN",
@@ -47,8 +53,9 @@ RELEVANCE_KEYWORDS = [
 
 
 def extract_school(filename):
-    """ptit_trangchu.txt -> ptit"""
-    return filename.split("_")[0] if "_" in filename else "unknown"
+    """ptit_trangchu.md hoac ptit_trangchu.txt -> ptit"""
+    base = filename.replace(".md", "").replace(".txt", "")
+    return base.split("_")[0] if "_" in base else "unknown"
 
 
 def file_hash(filepath):
@@ -60,10 +67,38 @@ def file_hash(filepath):
     return h.hexdigest()
 
 
+# Dong menu nav: bat dau bang * / + / - (co link [text](url) hoac tieu de ngan < 50 ky tu)
+_MENU_LINE = re.compile(r"^[\*\+\-]\s*(?:\[.+\]\(.+\)|.{0,50})\s*$")
+
+# Chi xoa block menu neu no bat dau trong N dong dau (menu nav luon o dau file, tranh cat list noi dung giua/cuoi)
+_MENU_BLOCK_MAX_START = 25
+
+
 def clean_content(text):
-    """Lam sach noi dung Markdown: xoa footer lap, dong rac.
+    """Lam sach noi dung Markdown: xoa menu dau file, footer lap, dong rac.
     Giu dong trang truoc/sau heading de bao toan cau truc Markdown."""
     lines = text.splitlines()
+
+    # Tuy chon: xoa block menu nav trong N dong dau (tat qua STRIP_NAV_MENU neu dung nhieu nguon)
+    if STRIP_NAV_MENU:
+        search_limit = min(_MENU_BLOCK_MAX_START, len(lines))
+        i = 0
+        while i < search_limit:
+            menu_count = 0
+            j = i
+            while j < len(lines):
+                s = lines[j].strip()
+                if _MENU_LINE.match(s):
+                    menu_count += 1
+                    j += 1
+                elif s == "" and j > i:
+                    j += 1
+                else:
+                    break
+            if menu_count >= 5:
+                lines = lines[:i] + lines[j:]
+                break
+            i += 1
 
     # Tim vi tri bat dau footer va cat bo
     cut_index = len(lines)
@@ -128,7 +163,7 @@ def is_relevant_content(text):
     return False
 
 
-def heading_aware_chunk(text, chunk_size=800, chunk_overlap=150):
+def heading_aware_chunk(text, chunk_size=1000, chunk_overlap=150):
     """
     Chia noi dung theo heading Markdown, giu heading prefix cho moi chunk.
     Neu chunk van qua dai (> chunk_size), dung RecursiveCharacterTextSplitter
@@ -183,13 +218,18 @@ def heading_aware_chunk(text, chunk_size=800, chunk_overlap=150):
     return final_chunks
 
 
+def _is_data_file(filename):
+    """Nhan .md (crawl moi) va .txt (cu hoac chuyen tu HTML)."""
+    return filename.endswith(".md") or filename.endswith(".txt")
+
+
 def get_unprocessed_files():
     """Lay file chua xu ly HOAC file da thay doi (hash khac)."""
     if not os.path.exists(DATA_DIR):
         return []
     result = []
     for f in sorted(os.listdir(DATA_DIR)):
-        if not f.endswith(".txt"):
+        if not _is_data_file(f):
             continue
         filepath = os.path.join(DATA_DIR, f)
         current_hash = file_hash(filepath)
@@ -204,16 +244,17 @@ def get_all_data_files():
         return []
     files = []
     for f in sorted(os.listdir(DATA_DIR)):
-        if f.endswith(".txt"):
-            filepath = os.path.join(DATA_DIR, f)
-            current_hash = file_hash(filepath)
-            stored_hash = get_file_hash(f)
-            files.append({
-                "filename": f,
-                "school": extract_school(f),
-                "size": os.path.getsize(filepath),
-                "processed": current_hash == stored_hash if stored_hash else False
-            })
+        if not _is_data_file(f):
+            continue
+        filepath = os.path.join(DATA_DIR, f)
+        current_hash = file_hash(filepath)
+        stored_hash = get_file_hash(f)
+        files.append({
+            "filename": f,
+            "school": extract_school(f),
+            "size": os.path.getsize(filepath),
+            "processed": current_hash == stored_hash if stored_hash else False
+        })
     return files
 
 
@@ -256,6 +297,15 @@ def process_files(filenames=None):
                 current_hash = file_hash(filepath)
                 mark_processed(filename, school, 0, current_hash)
                 continue
+
+            # Them tieu de ngu canh cho file bang diem (de chunk de match cau hoi "diem chuan ngành CNTT")
+            if "diem-trung-tuyen" in filename.lower() or "điểm trúng tuyển" in text[:800].lower():
+                first_line = text.split("\n")[0].strip()
+                if first_line.startswith("[") and "]" in first_line:
+                    doc_title = first_line.strip("[]").strip()
+                else:
+                    doc_title = "Điểm trúng tuyển PTIT"
+                text = doc_title + "\n\n" + text
 
             # Chunk noi dung (heading-aware neu co Markdown headers)
             chunks = heading_aware_chunk(text)
