@@ -441,6 +441,73 @@
     .school-urls-header:first-child {
       border-top: none
     }
+
+    .disc-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 13px
+    }
+
+    .disc-item:hover {
+      background: #f8f9fa
+    }
+
+    .disc-item a {
+      flex: 1;
+      color: #1a73e8;
+      text-decoration: none;
+      word-break: break-all
+    }
+
+    .disc-item a:hover {
+      text-decoration: underline
+    }
+
+    .disc-btn {
+      border: none;
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap
+    }
+
+    .disc-add {
+      background: #e6f4ea;
+      color: #1e8e3e
+    }
+
+    .disc-add:hover {
+      background: #ceead6
+    }
+
+    .disc-skip {
+      background: #f1f3f4;
+      color: #5f6368
+    }
+
+    .disc-skip:hover {
+      background: #e4e6eb
+    }
+
+    .disc-approve-all {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: 1px solid #c2d7f5;
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
+    .disc-approve-all:hover {
+      background: #c2d7f5
+    }
   </style>
 </head>
 
@@ -548,6 +615,15 @@
         </div>
       </div>
       <div class="cb" style="padding:0" id="urlListContainer"></div>
+    </div>
+
+    <!-- Discovered URLs -->
+    <div class="card" id="discCard" style="display:none">
+      <div class="ch">
+        <h2>Links phat hien</h2>
+        <div class="g"><span class="badge bw" id="discCount">0</span></div>
+      </div>
+      <div class="cb" style="padding:0" id="discContainer"></div>
     </div>
 
     <!-- Xu ly du lieu -->
@@ -675,8 +751,8 @@
         // Header
         var statusHtml = '';
         if (failedCount > 0) statusHtml += '<span class="badge bred">' + failedCount + ' loi</span> ';
-        if (uncrawled > 0) statusHtml += '<span class="badge bw">' + uncrawled + ' chua crawl</span>';
-        if (failedCount === 0 && uncrawled === 0) statusHtml = '<span class="badge bdn">Da crawl het</span>';
+        if (uncrawled > 0) statusHtml += '<button class="crawl-one" id="csb_' + s.school_id + '" onclick="crawlSchool(\'' + s.school_id + '\')" style="margin-right:6px">Crawl ' + uncrawled + ' URL</button>';
+        if (failedCount === 0 && uncrawled === 0) statusHtml += '<span class="badge bdn">Da crawl het</span>';
         html += '<div class="school-urls-header"><span><span class="badge bv">' + s.school_id + '</span> ' + s.name + ' - ' + s.urls.length + ' URLs</span><span>' + statusHtml + '</span></div>';
 
         // URL rows
@@ -767,7 +843,68 @@
       });
     }
 
+    function loadDiscovered() {
+      fetch('/admin/api/discovered-urls').then(function (r) { return r.json() }).then(function (data) {
+        var disc = data.discovered || [];
+        var card = document.getElementById('discCard');
+        var container = document.getElementById('discContainer');
+        var total = 0;
+        disc.forEach(function (s) { total += s.urls.length });
+        document.getElementById('discCount').textContent = total + ' links moi';
+
+        if (total === 0) { card.style.display = 'none'; return; }
+        card.style.display = '';
+
+        var html = '';
+        disc.forEach(function (s) {
+          html += '<div class="school-urls-header"><span><span class="badge bv">' + s.school_id + '</span> ' + s.name + ' - ' + s.urls.length + ' links</span><span><button class="disc-approve-all" onclick="approveAll(\'' + s.school_id + '\')" style="margin-right:6px">Them tat ca</button><button class="crawl-one" onclick="approveAndCrawl(\'' + s.school_id + '\')">Them &amp; Crawl</button></span></div>';
+          s.urls.forEach(function (url) {
+            var eu = encodeURIComponent(url);
+            html += '<div class="disc-item"><a href="' + url + '" target="_blank">' + url + '</a><button class="disc-btn disc-add" onclick="approveUrl(\'' + s.school_id + '\',\'' + eu + '\')">+ Them</button><button class="disc-btn disc-skip" onclick="dismissUrl(\'' + s.school_id + '\',\'' + eu + '\')">Bo qua</button></div>';
+          });
+        });
+        container.innerHTML = html;
+      });
+    }
+
+    function approveUrl(sid, eu) {
+      var url = decodeURIComponent(eu);
+      fetch('/admin/api/approve-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid, url: url }) }).then(function () { toast('Da them URL'); load(); loadDiscovered(); });
+    }
+
+    function dismissUrl(sid, eu) {
+      var url = decodeURIComponent(eu);
+      fetch('/admin/api/dismiss-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid, url: url }) }).then(function () { loadDiscovered(); });
+    }
+
+    function approveAll(sid) {
+      fetch('/admin/api/approve-all-urls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid }) }).then(function (r) { return r.json() }).then(function (d) {
+        toast('Da them ' + d.count + ' URLs'); load(); loadDiscovered();
+      });
+    }
+
+    function crawlSchool(sid) {
+      var btn = document.getElementById('csb_' + sid);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="lds"></span> Dang crawl...'; }
+      fetch('/admin/api/crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid }) }).then(function (r) { return r.json() }).then(function (d) {
+        toast('Crawl ' + sid + ': ' + d.crawled + ' trang, ' + d.failed + ' loi');
+        load(); loadDiscovered();
+      });
+    }
+
+    function approveAndCrawl(sid) {
+      toast('Dang them URLs va crawl ' + sid + '...', 'tinfo');
+      fetch('/admin/api/approve-all-urls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid }) }).then(function (r) { return r.json() }).then(function (d) {
+        toast('Da them ' + d.count + ' URLs. Dang crawl...', 'tinfo');
+        return fetch('/admin/api/crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ school_id: sid }) });
+      }).then(function (r) { return r.json() }).then(function (d) {
+        toast('Crawl ' + sid + ': ' + d.crawled + ' trang, ' + d.failed + ' loi');
+        load(); loadDiscovered();
+      });
+    }
+
     load();
+    loadDiscovered();
   </script>
 </body>
 

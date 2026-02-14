@@ -20,10 +20,12 @@ def get_collection():
 def get_all_schools():
     """Tra ve list cac truong."""
     docs = list(get_collection().find({}, {"_id": 0}))
-    # Dam bao luon co field failed
+    # Dam bao luon co cac fields
     for d in docs:
         if "failed" not in d:
             d["failed"] = []
+        if "discovered_urls" not in d:
+            d["discovered_urls"] = []
     return docs
 
 
@@ -139,4 +141,59 @@ def remove_url(school_id, url):
     get_collection().update_one(
         {"school_id": school_id},
         {"$pull": {"urls": url, "crawled": url, "failed": url}}
+    )
+
+
+# ==================== Discovered URLs ====================
+
+def save_discovered_urls(school_id, urls):
+    """Luu cac URL phat hien duoc khi crawl (chi luu URL chua co trong urls/crawled/failed/dismissed)."""
+    col = get_collection()
+    school = col.find_one({"school_id": school_id})
+    if not school:
+        return
+    existing = set(school.get("urls", []))
+    existing |= set(school.get("crawled", []))
+    existing |= set(school.get("failed", []))
+    existing |= set(school.get("dismissed_urls", []))
+    existing |= set(school.get("discovered_urls", []))
+    new_urls = [u for u in urls if u not in existing]
+    if new_urls:
+        col.update_one(
+            {"school_id": school_id},
+            {"$addToSet": {"discovered_urls": {"$each": new_urls}}}
+        )
+
+
+def get_discovered_urls(school_id):
+    """Lay danh sach URLs da phat hien nhung chua duoc them/bo qua."""
+    school = get_collection().find_one({"school_id": school_id})
+    if not school:
+        return []
+    return school.get("discovered_urls", [])
+
+
+def approve_discovered_url(school_id, url):
+    """Chuyen URL tu discovered sang urls (de crawl)."""
+    col = get_collection()
+    col.update_one(
+        {"school_id": school_id},
+        {"$pull": {"discovered_urls": url}}
+    )
+    col.update_one(
+        {"school_id": school_id, "urls": {"$ne": url}},
+        {"$push": {"urls": url}}
+    )
+
+
+def dismiss_discovered_url(school_id, url):
+    """Bo qua URL (khong hien lai)."""
+    col = get_collection()
+    col.update_one(
+        {"school_id": school_id},
+        {"$pull": {"discovered_urls": url}}
+    )
+    col.update_one(
+        {"school_id": school_id},
+        {"$addToSet": {"dismissed_urls": url}}
     )

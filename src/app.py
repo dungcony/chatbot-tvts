@@ -185,6 +185,54 @@ def api_embed():
     from scripts.prepare_data import process_files
     return jsonify(process_files())
 
+@app.route("/admin/api/discovered-urls", methods=["GET"])
+def api_discovered_urls():
+    """Lay tat ca discovered URLs cua moi truong."""
+    from models.school import get_all_schools
+    result = []
+    for s in get_all_schools():
+        discovered = s.get("discovered_urls", [])
+        if discovered:
+            result.append({"school_id": s["school_id"], "name": s["name"], "urls": discovered})
+    return jsonify({"discovered": result})
+
+@app.route("/admin/api/approve-url", methods=["POST"])
+def api_approve_url():
+    """Chuyen discovered URL sang danh sach URLs (de crawl)."""
+    d = request.get_json()
+    sid = d.get("school_id", "")
+    url = d.get("url", "")
+    if not sid or not url:
+        return jsonify({"error": "Thieu thong tin"}), 400
+    from models.school import approve_discovered_url
+    approve_discovered_url(sid, url)
+    return jsonify({"success": True})
+
+@app.route("/admin/api/approve-all-urls", methods=["POST"])
+def api_approve_all():
+    """Chuyen tat ca discovered URLs cua 1 truong sang URLs."""
+    d = request.get_json()
+    sid = d.get("school_id", "")
+    if not sid:
+        return jsonify({"error": "Thieu school_id"}), 400
+    from models.school import get_discovered_urls, approve_discovered_url
+    urls = get_discovered_urls(sid)
+    for url in urls:
+        approve_discovered_url(sid, url)
+    return jsonify({"success": True, "count": len(urls)})
+
+@app.route("/admin/api/dismiss-url", methods=["POST"])
+def api_dismiss_url():
+    """Bo qua discovered URL."""
+    d = request.get_json()
+    sid = d.get("school_id", "")
+    url = d.get("url", "")
+    if not sid or not url:
+        return jsonify({"error": "Thieu thong tin"}), 400
+    from models.school import dismiss_discovered_url
+    dismiss_discovered_url(sid, url)
+    return jsonify({"success": True})
+
 
 if __name__ == "__main__":
     print("=" * 50)
