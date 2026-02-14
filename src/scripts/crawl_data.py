@@ -7,11 +7,32 @@ import sys, os, re, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from urllib.parse import urlparse, urljoin
 from models.school import get_uncrawled_urls, mark_crawled, mark_failed, save_discovered_urls
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+
+# --- BLACKLIST / WHITELIST ---
+# Loai bo URL co chua cac path nay
+BLACKLIST_PATHS = ["/tag/", "/category/", "/page/", "/author/", "/feed/", "/wp-json/", "/wp-admin/"]
+# Chi crawl URL co chua cac path nay (de trong [] = crawl tat ca)
+WHITELIST_PATHS = []
+
+# Cac cum tu nhan dien trang loi (soft 404, 403, v.v.)
+ERROR_PATTERNS = [
+    "không tìm thấy trang",
+    "page not found",
+    "lỗi 404",
+    "error 404",
+    "trang không tồn tại",
+    "không tồn tại",
+    "403 forbidden",
+    "access denied",
+]
+
+# Noi dung qua ngan (chi co footer/menu) thi coi nhu khong co du lieu
+MIN_CONTENT_LENGTH = 200
 
 
 def table_to_text(table_tag):
@@ -58,6 +79,23 @@ def table_to_text(table_tag):
 SKIP_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".svg", ".zip", ".doc", ".docx", ".xls", ".xlsx"}
 
 
+def is_url_allowed(url):
+    """Kiem tra URL co vuot qua blacklist/whitelist khong."""
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+
+    # Blacklist: loai bo neu path chua bat ky pattern nao
+    for bp in BLACKLIST_PATHS:
+        if bp in path:
+            return False
+
+    # Whitelist: neu co, chi cho phep path chua it nhat 1 pattern
+    if WHITELIST_PATHS:
+        return any(wp in path for wp in WHITELIST_PATHS)
+
+    return True
+
+
 def discover_links(soup, base_url):
     """Tim tat ca links cung domain trong trang. Tra ve set URLs."""
     parsed_base = urlparse(base_url)
@@ -74,6 +112,9 @@ def discover_links(soup, base_url):
         # Bo qua file tai lieu / hinh anh
         ext = os.path.splitext(parsed.path)[1].lower()
         if ext in SKIP_EXTENSIONS:
+            continue
+        # Ap dung blacklist/whitelist
+        if not is_url_allowed(full_url):
             continue
         if full_url != base_url.rstrip("/"):
             found.add(full_url)
@@ -101,13 +142,27 @@ def crawl_page(url, timeout=15):
         for table in soup.find_all("table"):
             formatted = table_to_text(table)
             if formatted:
-                table.replace_with(BeautifulSoup(formatted, "html.parser"))
+                table.replace_with(NavigableString(formatted))
             else:
                 table.decompose()  # Xoa bang rong
 
         text = soup.get_text(separator="\n", strip=True)
         lines = [l.strip() for l in text.splitlines() if l.strip()]
-        return "\n".join(lines), links
+        text = "\n".join(lines)
+
+        # Kiem tra soft 404 / trang loi (chi check 1000 ky tu dau de tranh false positive)
+        head_lower = text[:1000].lower()
+        for pattern in ERROR_PATTERNS:
+            if pattern in head_lower:
+                print(f"  SKIP (soft error: '{pattern}') {url}")
+                return None, links
+
+        # Kiem tra noi dung qua ngan
+        if len(text) < MIN_CONTENT_LENGTH:
+            print(f"  SKIP (qua ngan: {len(text)} < {MIN_CONTENT_LENGTH}) {url}")
+            return None, links
+
+        return text, links
     except Exception as e:
         print(f"  FAIL crawl {url}: {e}")
         return None, set()
@@ -126,12 +181,13 @@ def crawl_single(school_id, url):
     filepath = os.path.join(DATA_DIR, filename)
 
     text, links = crawl_page(url)
+    # Luon luu discovered links (ke ca khi trang fail)
+    if links:
+        save_discovered_urls(school_id, links)
     if text:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(text)
         mark_crawled(school_id, url)
-        if links:
-            save_discovered_urls(school_id, links)
         print(f"  OK [{school_id}] {filename} ({len(text)} ky tu, {len(links)} links)")
         return {"success": True, "filename": filename, "chars": len(text), "discovered": len(links)}
     else:
@@ -156,12 +212,13 @@ def crawl_school(school_id=None):
         filepath = os.path.join(DATA_DIR, filename)
 
         text, links = crawl_page(url)
+        # Luon luu discovered links (ke ca khi trang fail)
+        if links:
+            save_discovered_urls(sid, links)
         if text:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(text)
             mark_crawled(sid, url)
-            if links:
-                save_discovered_urls(sid, links)
             crawled.append({"school": sid, "filename": filename, "url": url, "chars": len(text)})
             print(f"  OK [{sid}] {filename} ({len(text)} ky tu, {len(links)} links)")
         else:
