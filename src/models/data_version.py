@@ -1,6 +1,7 @@
 """
 Model DataVersion - Theo doi file da xu ly embedding
 Collection: data_versions
+Luu hash de phat hien file thay doi.
 """
 from datetime import datetime, timezone
 from models.db import get_db
@@ -20,14 +21,23 @@ def is_processed(filename):
     return get_collection().find_one({"filename": filename, "status": "done"}) is not None
 
 
-def mark_processed(filename, school, chunks_count):
+def get_file_hash(filename):
+    """Lay hash da luu cua file. Tra ve None neu chua co."""
+    doc = get_collection().find_one({"filename": filename, "status": "done"})
+    return doc.get("file_hash") if doc else None
+
+
+def mark_processed(filename, school, chunks_count, file_hash=None):
+    data = {
+        "filename": filename, "school": school,
+        "status": "done", "chunks_count": chunks_count,
+        "processed_at": datetime.now(timezone.utc)
+    }
+    if file_hash:
+        data["file_hash"] = file_hash
     get_collection().update_one(
         {"filename": filename},
-        {"$set": {
-            "filename": filename, "school": school,
-            "status": "done", "chunks_count": chunks_count,
-            "processed_at": datetime.now(timezone.utc)
-        }},
+        {"$set": data},
         upsert=True
     )
 

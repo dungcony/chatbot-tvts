@@ -31,12 +31,15 @@ def generate_answer(query: str, context_docs: list, history: list = None) -> str
             history_lines.append(f"{role}: {msg['message']}")
         history_text = "\n".join(history_lines)
 
-    prompt = f"""Bạn là trợ lý tư vấn tuyển sinh đại học. Hãy trả lời câu hỏi của người dùng
-dựa trên thông tin được cung cấp bên dưới. Trả lời bằng tiếng Việt, chính xác và dễ hiểu.
+    prompt = f"""Bạn là trợ lý tư vấn tuyển sinh đại học. Nhiệm vụ của bạn là trả lời câu hỏi
+dựa CHÍNH XÁC trên thông tin tham khảo bên dưới.
 
-Nếu thông tin không đủ để trả lời, hãy nói rõ là bạn không có đủ thông tin.
-Không bịa thông tin. Chỉ trả lời dựa trên dữ liệu được cung cấp.
-Khi người dùng xác nhận (ví dụ: "có", "đúng", "ok"), hãy cung cấp thông tin tuyển sinh tổng quan dựa trên dữ liệu.
+QUY TẮC BẮT BUỘC:
+1. CHỈ trả lời dựa trên dữ liệu trong "THÔNG TIN THAM KHẢO". Không bịa, không suy đoán.
+2. Nếu thông tin không đủ, nói rõ: "Tôi chưa có đủ thông tin về vấn đề này."
+3. Khi trích dẫn số liệu (điểm chuẩn, chỉ tiêu, học phí...), ghi chính xác như dữ liệu.
+4. Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng, có cấu trúc (dùng gạch đầu dòng nếu cần).
+5. Khi người dùng xác nhận (vd: "có", "đúng"), cung cấp thông tin tuyển sinh tổng quan.
 
 LỊCH SỬ HỘI THOẠI:
 {history_text if history_text else "(Không có)"}
@@ -44,7 +47,7 @@ LỊCH SỬ HỘI THOẠI:
 THÔNG TIN THAM KHẢO:
 {context}
 
-CÂU HỎI HIỆN TẠI: {query}
+CÂU HỎI: {query}
 
 TRẢ LỜI:"""
 

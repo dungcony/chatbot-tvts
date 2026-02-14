@@ -132,11 +132,24 @@ def crawl_page(url, timeout=15):
             return None, set()
         soup = BeautifulSoup(resp.text, "html.parser")
 
+        # Lay title trang
+        title = soup.title.get_text(strip=True) if soup.title else ""
+
         # Phat hien links cung domain TRUOC khi xoa tags
         links = discover_links(soup, url)
 
-        for tag in soup(["script", "style", "nav", "footer", "header"]):
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "noscript"]):
             tag.decompose()
+
+        # Xoa cac block co class/id thuong chua noi dung rac
+        JUNK_PATTERNS = ["sidebar", "breadcrumb", "related", "widget", "comment", "share", "social", "advert", "banner"]
+        for tag in soup.find_all(True):
+            classes = " ".join(tag.get("class", [])).lower()
+            tag_id = (tag.get("id") or "").lower()
+            for pattern in JUNK_PATTERNS:
+                if pattern in classes or pattern in tag_id:
+                    tag.decompose()
+                    break
 
         # Xu ly bang HTML: chuyen thanh text co cau truc truoc khi get_text()
         for table in soup.find_all("table"):
@@ -161,6 +174,12 @@ def crawl_page(url, timeout=15):
         if len(text) < MIN_CONTENT_LENGTH:
             print(f"  SKIP (qua ngan: {len(text)} < {MIN_CONTENT_LENGTH}) {url}")
             return None, links
+
+        # Them metadata vao dau file de giu ngu canh khi chunk
+        metadata = f"[URL: {url}]"
+        if title:
+            metadata = f"[{title}]\n{metadata}"
+        text = f"{metadata}\n\n{text}"
 
         return text, links
     except Exception as e:
