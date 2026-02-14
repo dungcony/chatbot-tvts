@@ -7,7 +7,8 @@ Pipeline: data/*.txt -> Clean -> Chunking -> Embedding -> MongoDB
 import sys, os, re, hashlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
+from langchain_core.documents import Document
 from models.document import get_collection, COLLECTION_NAME
 from models.data_version import is_processed, mark_processed, get_file_hash
 from services.embedding import get_embedding_model
@@ -28,6 +29,22 @@ FOOTER_MARKERS = [
 # Noi dung toi thieu sau khi clean (file ngan hon thi bo qua)
 MIN_CLEAN_LENGTH = 150
 
+# --- MARKDOWN-AWARE CHUNKING ---
+HEADERS_TO_SPLIT_ON = [("#", "h1"), ("##", "h2"), ("###", "h3")]
+
+# --- KIEM TRA NOI DUNG LIEN QUAN ---
+# File phai chua it nhat 1 keyword de duoc embed
+RELEVANCE_KEYWORDS = [
+    # Tuyen sinh
+    "tuyển sinh", "điểm chuẩn", "xét tuyển", "chỉ tiêu", "mã ngành",
+    "học phí", "phương thức", "trúng tuyển", "nhập học", "nguyện vọng",
+    "đăng ký xét tuyển", "điểm trúng tuyển",
+    # Thong tin truong
+    "giới thiệu", "đào tạo", "cơ sở", "chương trình", "học bổng",
+    "câu hỏi thường gặp", "ngành học", "cơ sở vật chất", "triết lý giáo dục",
+    "sứ mạng", "tầm nhìn",
+]
+
 
 def extract_school(filename):
     """ptit_trangchu.txt -> ptit"""
@@ -44,7 +61,8 @@ def file_hash(filepath):
 
 
 def clean_content(text):
-    """Lam sach noi dung: xoa footer lap, dong rac, khoang trang thua."""
+    """Lam sach noi dung Markdown: xoa footer lap, dong rac.
+    Giu dong trang truoc/sau heading de bao toan cau truc Markdown."""
     lines = text.splitlines()
 
     # Tim vi tri bat dau footer va cat bo
@@ -59,20 +77,110 @@ def clean_content(text):
             break
     lines = lines[:cut_index]
 
-    # Xoa cac dong rac
+    # Xoa cac dong rac, giu dong trang co y nghia cho Markdown
+    JUNK_LINES = {"xem chi tiết", "facebook", "youtube", "xem chi tiet"}
+    JUNK_AUTHORS = {"admindaotao", "ptit"}
     cleaned = []
+    prev_blank = False
     for line in lines:
         stripped = line.strip()
-        # Bo dong chi co "Xem chi tiết", "Facebook", "Youtube", v.v.
-        if stripped.lower() in ("xem chi tiết", "facebook", "youtube", "xem chi tiet"):
-            continue
-        # Bo dong chi co ten tac gia lap lai
-        if stripped in ("admindaotao", "ptit") and len(stripped) < 20:
-            continue
-        if stripped:
-            cleaned.append(stripped)
 
-    return "\n".join(cleaned)
+        # Bo dong rac
+        if stripped.lower() in JUNK_LINES:
+            continue
+        if stripped in JUNK_AUTHORS:
+            continue
+
+        # Dong trang: giu toi da 1 dong trang lien tiep
+        if not stripped:
+            if not prev_blank and cleaned:
+                cleaned.append("")
+                prev_blank = True
+            continue
+
+        # Dam bao co dong trang TRUOC heading Markdown (# ## ###)
+        if stripped.startswith("#") and cleaned and cleaned[-1] != "":
+            cleaned.append("")
+
+        cleaned.append(stripped)
+        prev_blank = False
+
+    # Dam bao co dong trang SAU heading Markdown
+    result = []
+    for i, line in enumerate(result_lines := cleaned):
+        result.append(line)
+        # Neu dong hien tai la heading va dong tiep theo khong phai dong trang
+        if line.startswith("#") and i + 1 < len(result_lines) and result_lines[i + 1] != "":
+            result.append("")
+
+    # Xoa dong trang dau/cuoi thua
+    text = "\n".join(result).strip()
+    return text
+
+
+def is_relevant_content(text):
+    """Kiem tra noi dung co lien quan den tuyen sinh / thong tin truong khong.
+    Tra ve True neu co it nhat 1 keyword lien quan."""
+    text_lower = text.lower()
+    for kw in RELEVANCE_KEYWORDS:
+        if kw in text_lower:
+            return True
+    return False
+
+
+def heading_aware_chunk(text, chunk_size=800, chunk_overlap=150):
+    """
+    Chia noi dung theo heading Markdown, giu heading prefix cho moi chunk.
+    Neu chunk van qua dai (> chunk_size), dung RecursiveCharacterTextSplitter
+    de tach tiep nhung van giu heading prefix.
+    Fallback: neu khong co heading Markdown, split binh thuong.
+    """
+    md_splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=HEADERS_TO_SPLIT_ON,
+        strip_headers=True,
+    )
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+
+    md_docs = md_splitter.split_text(text)
+
+    # Fallback: khong co heading markdown -> split binh thuong
+    has_headers = any(
+        key in doc.metadata
+        for doc in md_docs
+        for _, key in HEADERS_TO_SPLIT_ON
+    )
+    if not has_headers:
+        return text_splitter.create_documents([text])
+
+    final_chunks = []
+    for doc in md_docs:
+        # Build heading prefix tu metadata (h1 > h2 > h3)
+        prefix_parts = []
+        for level, key in HEADERS_TO_SPLIT_ON:
+            if key in doc.metadata:
+                prefix_parts.append(f"{level} {doc.metadata[key]}")
+        heading_prefix = "\n".join(prefix_parts)
+
+        content = doc.page_content
+        full_text = f"{heading_prefix}\n\n{content}" if heading_prefix else content
+
+        if len(full_text) <= chunk_size:
+            final_chunks.append(Document(page_content=full_text))
+        else:
+            # Tach tiep body, giu heading prefix cho moi sub-chunk
+            sub_docs = text_splitter.create_documents([content])
+            for sub_doc in sub_docs:
+                sub_text = (
+                    f"{heading_prefix}\n\n{sub_doc.page_content}"
+                    if heading_prefix
+                    else sub_doc.page_content
+                )
+                final_chunks.append(Document(page_content=sub_text))
+
+    return final_chunks
 
 
 def get_unprocessed_files():
@@ -117,7 +225,6 @@ def process_files(filenames=None):
 
     embedding_model = get_embedding_model()
     collection = get_collection()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
 
     total_chunks = 0
     processed = []
@@ -143,10 +250,15 @@ def process_files(filenames=None):
                 mark_processed(filename, school, 0, current_hash)
                 continue
 
-            # Chunk noi dung
-            from langchain_core.documents import Document
-            doc = Document(page_content=text, metadata={"source": filepath})
-            chunks = splitter.split_documents([doc])
+            # Bo qua file khong lien quan (khong chua keyword tuyen sinh/truong)
+            if not is_relevant_content(text):
+                print(f"  SKIP [{school}] {filename}: khong chua keyword lien quan")
+                current_hash = file_hash(filepath)
+                mark_processed(filename, school, 0, current_hash)
+                continue
+
+            # Chunk noi dung (heading-aware neu co Markdown headers)
+            chunks = heading_aware_chunk(text)
             if not chunks:
                 errors.append(f"File rong sau khi split: {filename}")
                 continue

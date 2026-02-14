@@ -8,4 +8,5 @@ langchain-huggingface
 sentence-transformers
 requests
 beautifulsoup4
+markdownify
 markdown

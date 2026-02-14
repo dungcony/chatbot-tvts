@@ -7,7 +7,8 @@ import sys, os, re, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import requests
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup
+from markdownify import markdownify as md
 from urllib.parse import urlparse, urljoin
 from models.school import get_uncrawled_urls, mark_crawled, mark_failed, save_discovered_urls
 
@@ -15,7 +16,11 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
 # --- BLACKLIST / WHITELIST ---
 # Loai bo URL co chua cac path nay
-BLACKLIST_PATHS = ["/tag/", "/category/", "/page/", "/author/", "/feed/", "/wp-json/", "/wp-admin/"]
+BLACKLIST_PATHS = [
+    "/tag/", "/category/", "/page/", "/author/", "/feed/", "/wp-json/", "/wp-admin/",
+    # Khong lien quan den tuyen sinh / gioi thieu truong
+    "/tuyen-dung/", "/tin-tuc-su-kien/", "/uncategorized/", "/cuu-sinh-vien/", "/tin-tuc/",
+]
 # Chi crawl URL co chua cac path nay (de trong [] = crawl tat ca)
 WHITELIST_PATHS = []
 
@@ -33,47 +38,6 @@ ERROR_PATTERNS = [
 
 # Noi dung qua ngan (chi co footer/menu) thi coi nhu khong co du lieu
 MIN_CONTENT_LENGTH = 200
-
-
-def table_to_text(table_tag):
-    """Chuyen <table> HTML thanh text co cau truc.
-    Moi dong du lieu duoc ghep voi header tuong ung.
-    Vd: "Ma nganh: 7480201 | Ten nganh: CNTT | THPT: 26.4"
-    """
-    rows = table_tag.find_all("tr")
-    if not rows:
-        return ""
-
-    # Tim hang header (uu tien hang co <th>, fallback sang hang dau tien)
-    headers = []
-    data_start = 0
-    for i, row in enumerate(rows):
-        ths = row.find_all("th")
-        if ths:
-            headers = [th.get_text(strip=True) for th in ths]
-            data_start = i + 1
-            break
-    if not headers:
-        # Khong co <th>, dung hang dau lam header
-        headers = [td.get_text(strip=True) for td in rows[0].find_all("td")]
-        data_start = 1
-
-    # Xu ly cac hang du lieu
-    lines = []
-    for row in rows[data_start:]:
-        cells = [td.get_text(strip=True) for td in row.find_all(["td", "th"])]
-        if not any(cells):
-            continue
-        if headers and len(cells) == len(headers):
-            pairs = [f"{h}: {c}" for h, c in zip(headers, cells) if c and c != "–"]
-            lines.append(" | ".join(pairs))
-        else:
-            # Fallback: noi cells bang dau |
-            non_empty = [c for c in cells if c and c != "–"]
-            if non_empty:
-                lines.append(" | ".join(non_empty))
-
-    return "\n".join(lines)
 
 
 SKIP_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".svg", ".zip", ".doc", ".docx", ".xls", ".xlsx"}
@@ -138,6 +102,12 @@ def crawl_page(url, timeout=15):
         # Phat hien links cung domain TRUOC khi xoa tags
         links = discover_links(soup, url)
 
+        # Phat hien trang listing (chi co danh sach tieu de + "Xem chi tiet", khong co noi dung thuc)
+        listing_count = len(soup.find_all(string=re.compile(r"Xem chi tiết", re.IGNORECASE)))
+        if listing_count >= 3:
+            print(f"  SKIP (trang listing: {listing_count} lan 'Xem chi tiet') {url}")
+            return None, links
+
         for tag in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "noscript"]):
             tag.decompose()
 
@@ -151,17 +121,21 @@ def crawl_page(url, timeout=15):
                     tag.decompose()
                     break
 
-        # Xu ly bang HTML: chuyen thanh text co cau truc truoc khi get_text()
-        for table in soup.find_all("table"):
-            formatted = table_to_text(table)
-            if formatted:
-                table.replace_with(NavigableString(formatted))
+        # Chuyen HTML -> Markdown (giu heading, table, list)
+        text = md(str(soup), heading_style="ATX", strip=["img"])
+        # Lam sach: xoa dong trang thua, giu toi da 1 dong trang giua cac doan
+        lines = [l.strip() for l in text.splitlines()]
+        cleaned = []
+        prev_blank = False
+        for line in lines:
+            if not line:
+                if not prev_blank:
+                    cleaned.append("")
+                prev_blank = True
             else:
-                table.decompose()  # Xoa bang rong
-
-        text = soup.get_text(separator="\n", strip=True)
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
-        text = "\n".join(lines)
+                cleaned.append(line)
+                prev_blank = False
+        text = "\n".join(cleaned).strip()
 
         # Kiem tra soft 404 / trang loi (chi check 1000 ky tu dau de tranh false positive)
         head_lower = text[:1000].lower()
