@@ -1,11 +1,11 @@
 """
-LLM Service - Ollama (Gemma2 9B)
+LLM Service - Ollama
 Tổng hợp thông tin từ context và sinh câu trả lời cho người dùng.
-Chạy local qua Ollama, không cần API key.
+Hỗ trợ cả model local (Ollama server) và cloud (Ollama Cloud API).
 """
 
 import requests
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from config import OLLAMA_BASE_URL, OLLAMA_MODEL, OLLAMA_API_KEY, IS_CLOUD_MODEL
 
 
 def generate_answer(query: str, context_docs: list, history: list = None) -> str:
@@ -48,12 +48,21 @@ CÂU HỎI HIỆN TẠI: {query}
 
 TRẢ LỜI:"""
 
+    headers = {}
+    if IS_CLOUD_MODEL and OLLAMA_API_KEY:
+        headers["Authorization"] = f"Bearer {OLLAMA_API_KEY}"
+
     response = requests.post(
         f"{OLLAMA_BASE_URL}/api/generate",
+        headers=headers,
         json={
             "model": OLLAMA_MODEL,
             "prompt": prompt,
-            "stream": False
+            "stream": False,
+            "options": {
+                "temperature": 0.1,
+                "num_predict": 1024
+            }
         },
         timeout=120
     )
